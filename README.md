@@ -110,8 +110,9 @@ You can use the **1-Click Demo Buttons** on the `/login` screen or manually ente
 
 ### 1. Installation
 ```bash
-# Clone or navigate to the project directory
-cd "BIT Campus Stationery Store"
+# Clone the repository
+git clone https://github.com/HARIHARASUTHAN/BIT-Campus-Stationery-Pre-Ordering-Portal.git
+cd BIT-Campus-Stationery-Pre-Ordering-Portal/frontend
 
 # Install dependencies
 npm install
@@ -133,12 +134,14 @@ VITE_USE_MOCK_API=true # Set to false once backend is running
 
 ### 3. Run Development Server
 ```bash
+cd frontend
 npm run dev
 ```
 Open **http://localhost:5173** in your browser.
 
 ### 4. Production Build
 ```bash
+cd frontend
 npm run build
 ```
-Generates production-optimized chunks in the `dist/` folder.
+Generates production-optimized chunks in the `frontend/dist/` folder.
