@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-[#e5e5e5];
+  }
+  body {
+    background-color: #fffaf0;
+    color: #0a0a0a;
+    @apply font-sans antialiased;
+  }
+
+  /* Clay Display Typography Voice - weight 500 with negative letter-spacing */
+  h1, .display-xl {
+    @apply font-medium tracking-[-2px] text-[#0a0a0a];
+  }
+  h2, .display-lg {
+    @apply font-medium tracking-[-1.5px] text-[#0a0a0a];
+  }
+  h3, .display-md {
+    @apply font-medium tracking-[-0.8px] text-[#0a0a0a];
+  }
+  h4, .display-sm {
+    @apply font-medium tracking-[-0.5px] text-[#0a0a0a];
+  }
+}
+
+@layer components {
+  /* Clay 6-Color Saturated Feature Card Utility Classes */
+  .clay-card-pink {
+    background-color: #ff4d8b;
+    color: #ffffff;
+    border-radius: 24px;
+  }
+  .clay-card-teal {
+    background-color: #1a3a3a;
+    color: #ffffff;
+    border-radius: 24px;
+  }
+  .clay-card-lavender {
+    background-color: #b8a4ed;
+    color: #0a0a0a;
+    border-radius: 24px;
+  }
+  .clay-card-peach {
+    background-color: #ffb084;
+    color: #0a0a0a;
+    border-radius: 24px;
+  }
+  .clay-card-ochre {
+    background-color: #e8b94a;
+    color: #0a0a0a;
+    border-radius: 24px;
+  }
+  .clay-card-cream {
+    background-color: #f5f0e0;
+    color: #0a0a0a;
+    border-radius: 24px;
+  }
+
+  /* Clay Standard Rounded Buttons */
+  .clay-btn-primary {
+    @apply bg-[#0a0a0a] text-white hover:bg-[#1f1f1f] rounded-[12px] h-[44px] px-5 font-semibold text-sm inline-flex items-center justify-center transition-all duration-150;
+  }
+  .clay-btn-secondary {
+    @apply bg-[#fffaf0] text-[#0a0a0a] border border-[#e5e5e5] hover:bg-[#faf5e8] rounded-[12px] h-[44px] px-5 font-semibold text-sm inline-flex items-center justify-center transition-all duration-150;
+  }
+  .clay-btn-on-color {
+    @apply bg-white text-[#0a0a0a] hover:bg-[#f5f0e0] rounded-[12px] h-[44px] px-5 font-semibold text-sm inline-flex items-center justify-center transition-all duration-150;
+  }
+
+  /* Clay Inputs */
+  .clay-input {
+    @apply bg-[#fffaf0] text-[#0a0a0a] border border-[#e5e5e5] focus:border-[#0a0a0a] focus:ring-1 focus:ring-[#0a0a0a] rounded-[12px] h-[44px] px-4 text-sm transition-all;
+  }
+}
+
