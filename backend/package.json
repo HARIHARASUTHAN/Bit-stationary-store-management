@@ -1,0 +1,29 @@
+{
+  "name": "bsp-stationery-backend",
+  "version": "1.0.0",
+  "description": "Backend API for BIT Campus Stationery Store Pre-Ordering & Inventory Portal powered by Express and Firebase",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/scripts/seed.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "keywords": [
+    "express",
+    "firebase",
+    "stationery",
+    "campus"
+  ],
+  "author": "",
+  "license": "ISC"
+}

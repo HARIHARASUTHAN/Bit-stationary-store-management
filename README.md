@@ -93,6 +93,37 @@ src/
 
 ---
 
+## 📁 Repository Structure
+
+```
+.
+├── frontend/                   # React (Vite) Single Page Application
+│   ├── src/
+│   │   ├── components/         # Modular UI, Layout, Catalog, Orders, Admin components
+│   │   ├── context/            # AuthContext (Firebase + session persistence)
+│   │   ├── hooks/              # useAuth, useCart (Zustand), useDebounce, useFetch
+│   │   ├── pages/              # Role-based pages (student, faculty, shopadmin, admin)
+│   │   ├── routes/             # AppRouter & ProtectedRoute
+│   │   └── services/           # api.js, authService.js, orderService.js, inventoryService.js, slotService.js
+│   ├── .env.example
+│   └── package.json
+│
+├── backend/                    # Node.js + Express API Server with Firebase Admin
+│   ├── src/
+│   │   ├── config/             # firebase.js (Admin SDK & Cloud Firestore connector)
+│   │   ├── controllers/        # auth, inventory, orders, slots, reports
+│   │   ├── middleware/         # authMiddleware (verifyIdToken), roleGuard, errorHandler
+│   │   ├── routes/             # REST endpoints (/api/inventory, /api/orders, /api/slots, etc.)
+│   │   ├── scripts/            # seed.js (populates Cloud Firestore)
+│   │   └── server.js           # Express app entry point (port 5001)
+│   ├── .env.example
+│   └── package.json
+│
+└── README.md
+```
+
+---
+
 ## 🔑 Quick Demo Credentials
 
 You can use the **1-Click Demo Buttons** on the `/login` screen or manually enter:
@@ -108,40 +139,37 @@ You can use the **1-Click Demo Buttons** on the `/login` screen or manually ente
 
 ## ⚙️ Getting Started
 
-### 1. Installation
+### 1. Run the Backend (Express + Firebase Admin)
 ```bash
-# Clone the repository
-git clone https://github.com/HARIHARASUTHAN/BIT-Campus-Stationery-Pre-Ordering-Portal.git
-cd BIT-Campus-Stationery-Pre-Ordering-Portal/frontend
-
-# Install dependencies
+cd backend
 npm install
-```
-
-### 2. Environment Setup
-A `.env` file is pre-configured for local mock development. If integrating with real Firebase Auth and backend endpoints, copy `.env.example`:
-```bash
-cp .env.example .env
-```
-Populate your Firebase configuration keys:
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_API_BASE_URL=http://localhost:5000/api
-VITE_USE_MOCK_API=true # Set to false once backend is running
-```
-
-### 3. Run Development Server
-```bash
-cd frontend
 npm run dev
 ```
-Open **http://localhost:5173** in your browser.
+- Backend runs at: **`http://localhost:5001`**
+- Health check: **`http://localhost:5001/api/health`**
+- Operates automatically in **Demo Mode** if Firebase credentials are not yet added.
 
-### 4. Production Build
+### 2. Run the Frontend (React + Vite)
+In a second terminal window:
 ```bash
 cd frontend
-npm run build
+npm install
+npm run dev
 ```
-Generates production-optimized chunks in the `frontend/dist/` folder.
+- Frontend runs at: **`http://localhost:5173`**
+
+---
+
+## 🔥 Connecting Live Firebase
+
+1. **Create Project**: Go to [Firebase Console](https://console.firebase.google.com/) and create a project.
+2. **Enable Auth**: Turn on **Email/Password** under **Authentication > Sign-in method**.
+3. **Enable Database**: Create a **Cloud Firestore Database** (start in Test mode).
+4. **Download Admin Key**: In Project Settings > Service accounts, click **Generate new private key**. Save it as `backend/serviceAccountKey.json`.
+5. **Seed Database**:
+   ```bash
+   cd backend
+   npm run seed
+   ```
+6. **Set Web Config**: Register a Web App in Firebase Console, copy your credentials into `frontend/.env`, and set `VITE_USE_MOCK_API=false`.
+
