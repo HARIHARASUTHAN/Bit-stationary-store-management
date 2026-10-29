@@ -20,11 +20,6 @@ export default function OrderCard({ order }) {
               <Store className="h-3 w-3 text-[#ff4d8b]" />
               {order.shopName || 'BIT Central Stationery Store'}
             </span>
-            {order.isBulkOrder && (
-              <span className="text-[10px] bg-[#b8a4ed]/30 text-[#0a0a0a] font-bold px-2 py-0.5 rounded-full border border-[#b8a4ed]/50">
-                Department Bulk Order
-              </span>
-            )}
           </div>
           <span className="text-xs text-[#9a9a9a] block mt-0.5">
             Placed on {formatDateTime(order.placedAt)}
@@ -82,7 +77,7 @@ export default function OrderCard({ order }) {
           <span className="text-lg font-medium tracking-tight text-[#0a0a0a]">{formatINR(order.total)}</span>
         </div>
         <Link
-          to={`/${role}/orders/${order.id}`}
+          to={`/${role || 'student'}/orders/${order.id}`}
           className="inline-flex items-center gap-1 text-xs font-semibold text-[#0a0a0a] hover:text-[#ff4d8b] transition-colors"
         >
           View Order Slip

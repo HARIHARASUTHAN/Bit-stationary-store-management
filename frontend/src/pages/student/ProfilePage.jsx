@@ -41,8 +41,9 @@ const YEAR_OPTIONS = [
 ];
 
 export default function StudentProfilePage() {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateUserProfile, role } = useAuth();
   const toast = useToast();
+  const isFaculty = role === 'faculty' || (user?.email && user.email.includes('@faculty.ac.in'));
 
   // Profile details states
   const [name, setName] = useState('');
@@ -168,7 +169,7 @@ export default function StudentProfilePage() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f5f0e0] border border-[#e5e5e5] text-xs font-semibold uppercase tracking-[1.5px] text-[#0a0a0a] mb-2.5">
             <Sparkles className="h-3.5 w-3.5 text-[#ff4d8b]" />
-            Student Account Center
+            {isFaculty ? 'Faculty Account Center' : 'Student Account Center'}
           </div>
           <h1 className="text-3xl sm:text-4xl font-medium tracking-[-1.5px] text-[#0a0a0a]">
             My Profile
@@ -178,17 +179,17 @@ export default function StudentProfilePage() {
           </p>
         </div>
 
-        {/* Student Info Card */}
+        {/* User Info Card */}
         <div className="bg-[#faf5e8] p-6 sm:p-8 rounded-[24px] border border-[#e5e5e5] space-y-6">
           <div className="flex items-center gap-4 border-b border-[#e5e5e5] pb-6">
             <div className="h-16 w-16 rounded-[20px] bg-[#0a0a0a] text-white flex items-center justify-center text-xl font-bold flex-shrink-0 shadow-sm">
-              {name ? name[0].toUpperCase() : 'S'}
+              {name ? name[0].toUpperCase() : (isFaculty ? 'F' : 'S')}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-[#0a0a0a] truncate">{name || 'Student'}</h3>
-                <Badge variant="peach" size="sm">
-                  STUDENT
+                <h3 className="text-lg font-semibold text-[#0a0a0a] truncate">{name || (isFaculty ? 'Faculty Member' : 'Student')}</h3>
+                <Badge variant={isFaculty ? 'lavender' : 'peach'} size="sm">
+                  {isFaculty ? 'FACULTY' : 'STUDENT'}
                 </Badge>
               </div>
               <p className="text-xs text-[#6a6a6a] truncate mt-0.5">{email}</p>
@@ -204,33 +205,33 @@ export default function StudentProfilePage() {
                 label="Full Name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Hari Arjun"
+                placeholder={isFaculty ? 'e.g. Dr. Kavitha M' : 'e.g. Hari Arjun'}
                 icon={User}
                 required
               />
 
               <Input
-                label="Roll / Register Number"
+                label={isFaculty ? 'Faculty / Employee ID' : 'Roll / Register Number'}
                 value={rollNumber}
                 onChange={(e) => setRollNumber(e.target.value)}
-                placeholder="e.g. 7376222AL123"
+                placeholder={isFaculty ? 'e.g. FAC-CSE-042' : 'e.g. 7376222AL123'}
                 icon={BookOpen}
               />
             </div>
 
-            {/* Editable Student Email Address */}
+            {/* Editable Campus Email Address */}
             <Input
-              label="Student Email Address"
+              label={isFaculty ? 'Campus Official Email' : 'Student Email Address'}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@bitsathy.ac.in"
+              placeholder={isFaculty ? 'name@faculty.ac.in' : 'name@bitsathy.ac.in'}
               icon={Mail}
               required
               helperText="Your official campus email used for order confirmations and pickup alerts"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 ${isFaculty ? 'sm:grid-cols-1' : 'sm:grid-cols-2'} gap-4`}>
               <Input
                 label="Contact Mobile (For Pickup SMS)"
                 value={phone}
@@ -239,13 +240,15 @@ export default function StudentProfilePage() {
                 icon={Phone}
               />
 
-              <Select
-                label="Academic Year"
-                value={yearOfStudy}
-                onChange={(e) => setYearOfStudy(e.target.value)}
-                options={YEAR_OPTIONS}
-                placeholder=""
-              />
+              {!isFaculty && (
+                <Select
+                  label="Academic Year"
+                  value={yearOfStudy}
+                  onChange={(e) => setYearOfStudy(e.target.value)}
+                  options={YEAR_OPTIONS}
+                  placeholder=""
+                />
+              )}
             </div>
 
             <Select

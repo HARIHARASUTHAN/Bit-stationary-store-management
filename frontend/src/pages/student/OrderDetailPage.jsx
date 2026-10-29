@@ -59,7 +59,7 @@ export default function StudentOrderDetailPage() {
           <h2 className="text-2xl font-medium tracking-[-1px] text-[#0a0a0a]">Order Slip Not Found</h2>
           <p className="text-xs text-[#6a6a6a] mt-2">Could not locate pre-order #{orderId}.</p>
           <div className="mt-5">
-            <Link to={`/${role}/orders`}>
+            <Link to={`/${role || 'student'}/orders`}>
               <Button variant="primary" size="sm" icon={ArrowLeft}>
                 Back to Orders
               </Button>

@@ -47,7 +47,9 @@ export default function StudentOrdersPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-medium tracking-[-1.5px] text-[#0a0a0a]">My Pre-Orders</h1>
+            <h1 className="text-3xl font-medium tracking-[-1.5px] text-[#0a0a0a]">
+              {role === 'faculty' ? 'Orders' : 'My Pre-Orders'}
+            </h1>
             <p className="text-xs text-[#6a6a6a] mt-1">
               Track status, pickup windows, and printable vouchers for campus store collection
             </p>

@@ -196,6 +196,15 @@ export async function getOrders(req, res, next) {
       const snapshot = await query.get();
       let orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
+      if (userRole !== 'shopadmin' && userRole !== 'admin' && orders.length === 0 && userEmail) {
+        try {
+          const emailSnap = await db.collection('orders').where('userEmail', '==', userEmail).get();
+          if (!emailSnap.empty) {
+            orders = emailSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          }
+        } catch (_) {}
+      }
+
       // Strictly isolate orders so that each shopadmin only receives orders for their own shop
       if (userRole === 'shopadmin') {
         orders = orders.filter((o) => doesOrderMatchShop(o, adminShopName, adminShopId));
@@ -317,11 +326,11 @@ export async function placeOrder(req, res, next) {
     const targetShopId = (shopId || 'main-store').trim();
 
     const orderData = {
-      userId: req.user?.uid || 'guest-user',
+      userId: req.user?.uid || req.body.userId || 'guest-user',
       userName: req.user?.displayName || req.body.userName || 'Campus User',
-      userEmail: req.user?.email || req.body.userEmail || 'student@student.ac.in',
+      userEmail: req.user?.email || req.body.userEmail || 'faculty@faculty.ac.in',
       userDepartment: userDepartment || req.body.userDepartment || 'General',
-      role: req.user?.role || (isBulkOrder ? 'faculty' : 'student'),
+      role: req.user?.role || (isBulkOrder ? 'faculty' : (req.body.role || 'faculty')),
       status: 'Pending',
       shopId: targetShopId,
       shopName: shopName || 'BIT Central Stationery Store',
