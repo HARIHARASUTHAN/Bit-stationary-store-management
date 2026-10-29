@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@/components/ui/Button';
 import { formatINR } from '@/utils/currency';
-import { ArrowRight, Clock, ShieldCheck } from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function CartSummary({
@@ -35,17 +35,8 @@ export default function CartSummary({
       </div>
 
       <div className="pt-3 border-t border-[#e5e5e5] flex justify-between items-baseline">
-        <span className="text-sm font-semibold text-[#0a0a0a]">Total Payable at Counter</span>
+        <span className="text-sm font-semibold text-[#0a0a0a]">Total Payable</span>
         <span className="text-2xl font-medium tracking-tight text-[#0a0a0a]">{formatINR(total)}</span>
-      </div>
-
-      {/* Clay Peach Info Box */}
-      <div className="bg-[#ffb084]/20 border border-[#ffb084]/40 rounded-[16px] p-3.5 text-xs text-[#0a0a0a] flex items-start gap-2.5">
-        <Clock className="h-4 w-4 text-[#0a0a0a] flex-shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <strong className="block font-semibold">Scheduled Counter Pickup</strong>
-          Your items are packed before your selected slot. Pay directly at Counter #1 upon collection.
-        </div>
       </div>
 
       {showCheckoutButton && (
@@ -57,7 +48,7 @@ export default function CartSummary({
             disabled={itemCount === 0}
             onClick={onProceed}
           >
-            Select Pickup Window
+            Proceed to Checkout
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </Link>
@@ -65,7 +56,7 @@ export default function CartSummary({
 
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6a6a6a]">
         <ShieldCheck className="h-3.5 w-3.5 text-[#1a3a3a]" />
-        <span>Official Bannari Amman Institute Campus Counter</span>
+        <span>Official Bannari Amman Institute Campus Store</span>
       </div>
     </div>
   );

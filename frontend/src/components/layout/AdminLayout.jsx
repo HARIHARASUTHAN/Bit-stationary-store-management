@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
-import { LayoutDashboard, Users, Settings, FileText, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, FileText } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -10,7 +10,6 @@ export default function AdminLayout({ children }) {
     { to: '/admin/accounts', label: 'Shop Admins', icon: Users },
     { to: '/admin/settings', label: 'System Settings', icon: Settings },
     { to: '/admin/audit-log', label: 'Audit Trail', icon: FileText },
-    { to: '/admin/reports', label: 'Export Reports', icon: BarChart3 },
   ];
 
   return (

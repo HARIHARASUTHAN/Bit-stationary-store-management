@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { loginWithEmail, logout as firebaseLogout, resetPassword as firebaseReset } from '@/services/authService';
-import { detectRoleFromEmail } from '@/services/authService';
+import {
+  loginWithEmail,
+  loginWithGoogle as firebaseLoginWithGoogle,
+  logout as firebaseLogout,
+  resetPassword as firebaseReset,
+  detectRoleFromEmail,
+  getProfile,
+} from '@/services/authService';
+
+import { auth, onAuthStateChanged } from '@/services/firebase';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +19,7 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage and Firebase Auth listener
   useEffect(() => {
     const stored = localStorage.getItem(SESSION_KEY);
     if (stored) {
@@ -23,7 +31,45 @@ export function AuthProvider({ children }) {
         localStorage.removeItem(SESSION_KEY);
       }
     }
-    setLoading(false);
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const tokenResult = await firebaseUser.getIdTokenResult().catch(() => ({ claims: {} }));
+        const role = tokenResult.claims?.role || detectRoleFromEmail(firebaseUser.email) || 'student';
+        
+        let profile = {};
+        try {
+          profile = await getProfile();
+        } catch (_) {}
+
+        const isSuresh = firebaseUser.email === 'suresh@shopadmin.ac.in';
+        const assignedShopName = isSuresh
+          ? (profile?.shopName || 'RASE MECH')
+          : (profile?.shopName || (firebaseUser.email === 'sis@shopadmin.ac.in' ? 'SIS BIT' : undefined));
+
+        if (isSuresh) {
+          localStorage.setItem('bsp_custom_shop_name', assignedShopName);
+        }
+
+        const sessionUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          role,
+          displayName: profile?.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          name: profile?.name || firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          shopName: assignedShopName,
+          shopId: profile?.shopId || (isSuresh ? 'main-store' : undefined),
+          department: profile?.department,
+          phone: profile?.phone,
+        };
+        setUser(sessionUser);
+        setRole(role);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -31,6 +77,42 @@ export function AuthProvider({ children }) {
     try {
       const userData = await loginWithEmail(email, password);
       const role = userData.role || detectRoleFromEmail(email);
+
+      let profile = {};
+      try {
+        profile = await getProfile();
+      } catch (_) {}
+
+      const isSuresh = email === 'suresh@shopadmin.ac.in';
+      const assignedShopName = isSuresh
+        ? (profile?.shopName || 'RASE MECH')
+        : (profile?.shopName || (email === 'sis@shopadmin.ac.in' ? 'SIS BIT' : undefined));
+
+      if (isSuresh) {
+        localStorage.setItem('bsp_custom_shop_name', assignedShopName);
+      }
+
+      const sessionUser = {
+        ...userData,
+        role,
+        shopName: assignedShopName,
+        shopId: profile?.shopId || (isSuresh ? 'main-store' : undefined),
+        department: profile?.department || userData.department,
+      };
+      setUser(sessionUser);
+      setRole(role);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(sessionUser));
+      return role;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    setLoading(true);
+    try {
+      const userData = await firebaseLoginWithGoogle();
+      const role = userData.role || detectRoleFromEmail(userData.email) || 'student';
       const sessionUser = { ...userData, role };
       setUser(sessionUser);
       setRole(role);
@@ -39,6 +121,14 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const updateUserProfile = useCallback(async (data) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...data };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   const logout = useCallback(async () => {
@@ -53,7 +143,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout, resetPassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        loading,
+        login,
+        loginWithGoogle,
+        updateUserProfile,
+        logout,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

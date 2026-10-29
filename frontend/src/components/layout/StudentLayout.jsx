@@ -1,12 +1,13 @@
 import React from 'react';
 import Navbar from './Navbar';
-import { LayoutDashboard, ShoppingBag, Clock } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Clock, User } from 'lucide-react';
 
 export default function StudentLayout({ children }) {
   const navLinks = [
     { to: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/student/catalog', label: 'Stationery Catalog', icon: ShoppingBag },
     { to: '/student/orders', label: 'My Orders', icon: Clock },
+    { to: '/student/profile', label: 'My Profile', icon: User },
   ];
 
   return (
@@ -22,7 +23,7 @@ export default function StudentLayout({ children }) {
             <span className="text-[11px] text-[#9a9a9a]">Bannari Amman Institute of Technology</span>
           </div>
           <p className="text-xs text-[#6a6a6a]">
-            Pre-Ordering Counter: Mon–Sat 8:30 AM to 6:00 PM • Desk Inquiries: stationery@bit.ac.in
+            Pre-Ordering Store: Mon–Sat 8:30 AM to 6:00 PM • Desk Inquiries: stationery@bit.ac.in
           </p>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-[#1a3a3a]"></span>

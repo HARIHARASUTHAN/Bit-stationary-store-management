@@ -42,13 +42,18 @@ export async function mockDeleteItem(id) {
 
 // ---------- Order Mock API ----------
 
-export async function mockGetOrders({ userId, role, status } = {}) {
+export async function mockGetOrders({ userId, role, status, shopId, email } = {}) {
   await delay();
   let result = [...orders];
   if (userId && role !== 'shopadmin' && role !== 'admin') {
-    result = result.filter((o) => o.userId === userId);
+    result = result.filter((o) => o.userId === userId || (email && o.userEmail === email));
   }
-  if (status) result = result.filter((o) => o.status === status);
+  if (shopId && shopId !== 'all') {
+    result = result.filter((o) => (o.shopId || 'main-store') === shopId);
+  }
+  if (status && status !== 'All') {
+    result = result.filter((o) => o.status === status);
+  }
   return result.sort((a, b) => new Date(b.placedAt) - new Date(a.placedAt));
 }
 
@@ -58,21 +63,68 @@ export async function mockGetOrderById(id) {
 }
 
 export async function mockPlaceOrder(data) {
-  await delay(1000);
+  await delay(600);
+  const targetShopId = (data.shopId || 'main-store').trim();
   const newOrder = {
     ...data,
     id: `ord-${String(++nextOrderId).padStart(3, '0')}`,
     status: 'Pending',
+    shopId: targetShopId,
+    shopName: data.shopName || 'BIT Central Stationery Store',
+    counterLocation: data.counterLocation || 'Main Store',
     placedAt: new Date().toISOString(),
-    timeline: [{ status: 'Pending', timestamp: new Date().toISOString(), note: 'Order placed successfully' }],
+    timeline: [
+      {
+        status: 'Pending',
+        timestamp: new Date().toISOString(),
+        note: `Order placed for ${data.shopName || 'BIT Central Stationery Store'}`,
+      },
+    ],
   };
   orders.unshift(newOrder);
-  // Deduct stock
+
+  // Deduct stock per shop and globally
   if (data.items) {
-    data.items.forEach(({ itemId, quantity }) => {
-      items = items.map((i) => i.id === itemId ? { ...i, stock: Math.max(0, i.stock - quantity) } : i);
+    data.items.forEach(({ itemId, id, quantity }) => {
+      const targetId = itemId || id;
+      const qty = Number(quantity) || 1;
+      items = items.map((i) => {
+        if (i.id === targetId) {
+          const shopStocks = { ...(i.shopStocks || {}) };
+          const curShop = typeof shopStocks[targetShopId] === 'number' ? shopStocks[targetShopId] : i.stock;
+          shopStocks[targetShopId] = Math.max(0, curShop - qty);
+          return {
+            ...i,
+            stock: Math.max(0, i.stock - qty),
+            shopStocks,
+          };
+        }
+        return i;
+      });
     });
   }
+
+  // Deduct slot capacity per shop and globally
+  if (data.pickupSlot) {
+    const slotId = data.pickupSlot.slotId || data.pickupSlot.id;
+    slots = slots.map((s) => {
+      const match = slotId
+        ? s.id === slotId
+        : (s.date === data.pickupSlot.date && s.time === data.pickupSlot.time);
+      if (match) {
+        const shopBookings = { ...(s.shopBookings || {}) };
+        const curShop = typeof shopBookings[targetShopId] === 'number' ? shopBookings[targetShopId] : (s.booked || 0);
+        shopBookings[targetShopId] = curShop + 1;
+        return {
+          ...s,
+          booked: (s.booked || 0) + 1,
+          shopBookings,
+        };
+      }
+      return s;
+    });
+  }
+
   return newOrder;
 }
 
@@ -81,13 +133,13 @@ export async function mockUpdateOrderStatus(id, status) {
   orders = orders.map((o) =>
     o.id === id
       ? {
-          ...o,
-          status,
-          timeline: [
-            ...o.timeline,
-            { status, timestamp: new Date().toISOString(), note: `Status updated to ${status}` },
-          ],
-        }
+        ...o,
+        status,
+        timeline: [
+          ...o.timeline,
+          { status, timestamp: new Date().toISOString(), note: `Status updated to ${status}` },
+        ],
+      }
       : o
   );
   return orders.find((o) => o.id === id);
@@ -97,6 +149,12 @@ export async function mockUpdateOrderStatus(id, status) {
 export async function mockGetSlots() {
   await delay(400);
   return [...slots];
+}
+
+export async function mockDeleteSlot(id) {
+  await delay(300);
+  slots = slots.filter((s) => s.id !== id);
+  return { success: true };
 }
 
 // ---------- Audit Log ----------

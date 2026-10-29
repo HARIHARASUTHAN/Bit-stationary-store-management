@@ -4,6 +4,7 @@ import {
   getOrderById,
   placeOrder,
   updateOrderStatus,
+  verifyPickupCode,
 } from '../controllers/orderController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 import { requireRole } from '../middleware/roleGuard.js';
@@ -19,5 +20,8 @@ router.post('/', authenticate, placeOrder);
 
 // Update order status progression (shopadmin & admin)
 router.patch('/:id/status', authenticate, requireRole(['shopadmin', 'admin']), updateOrderStatus);
+
+// Secure 6-digit counter pickup verification (shopadmin & admin)
+router.post('/:id/verify-pickup', authenticate, requireRole(['shopadmin', 'admin']), verifyPickupCode);
 
 export default router;

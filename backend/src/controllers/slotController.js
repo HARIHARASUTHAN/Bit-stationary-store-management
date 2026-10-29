@@ -1,17 +1,6 @@
 import { db, isFirebaseConnected } from '../config/firebase.js';
 
-let memorySlots = [
-  { id: 's1', date: '2026-09-09', time: '9:00 AM – 10:00 AM', capacity: 20, booked: 5 },
-  { id: 's2', date: '2026-09-09', time: '10:00 AM – 11:00 AM', capacity: 20, booked: 12 },
-  { id: 's3', date: '2026-09-09', time: '11:00 AM – 12:00 PM', capacity: 20, booked: 8 },
-  { id: 's4', date: '2026-09-09', time: '2:00 PM – 3:00 PM', capacity: 15, booked: 15 },
-  { id: 's5', date: '2026-09-09', time: '3:00 PM – 4:00 PM', capacity: 15, booked: 3 },
-  { id: 's6', date: '2026-09-10', time: '9:00 AM – 10:00 AM', capacity: 20, booked: 2 },
-  { id: 's7', date: '2026-09-10', time: '10:00 AM – 11:00 AM', capacity: 20, booked: 0 },
-  { id: 's8', date: '2026-09-10', time: '11:00 AM – 12:00 PM', capacity: 20, booked: 6 },
-  { id: 's9', date: '2026-09-10', time: '2:00 PM – 3:00 PM', capacity: 15, booked: 9 },
-  { id: 's10', date: '2026-09-10', time: '3:00 PM – 4:00 PM', capacity: 15, booked: 1 },
-];
+export let memorySlots = [];
 
 /**
  * GET /api/slots
@@ -87,3 +76,26 @@ export async function updateSlot(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * DELETE /api/slots/:id
+ */
+export async function deleteSlot(req, res, next) {
+  try {
+    const { id } = req.params;
+
+    if (isFirebaseConnected && db) {
+      await db.collection('slots').doc(id).delete();
+      return res.json({ success: true, message: `Slot #${id} deleted successfully.` });
+    }
+
+    const idx = memorySlots.findIndex((s) => s.id === id);
+    if (idx !== -1) {
+      memorySlots.splice(idx, 1);
+    }
+    res.json({ success: true, message: `Slot #${id} deleted successfully.` });
+  } catch (error) {
+    next(error);
+  }
+}
+

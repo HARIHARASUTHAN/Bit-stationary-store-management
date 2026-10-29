@@ -1,49 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import FacultyLayout from '@/components/layout/FacultyLayout';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
+import QuantitySelector from '@/components/catalog/QuantitySelector';
+import ProductSelector from '@/components/checkout/ProductSelector';
 import useCartStore from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { placeOrder } from '@/services/orderService';
+import { getSlots } from '@/services/slotService';
 import { mockSlots } from '@/mocks/slots';
 import { formatINR } from '@/utils/currency';
 import { useToast } from '@/components/ui/ToastProvider';
-import { Clock, ArrowLeft, Building2 } from 'lucide-react';
+import { Clock, ArrowLeft, Building2, Zap, Trash2, ShoppingBag, Info } from 'lucide-react';
 
 export default function FacultyCheckoutPage() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  const { cartItems, cartTotal, clearCart } = useCartStore();
+  const { cartItems, cartTotal, clearCart, addItem, updateQty, removeItem, cartShopId, cartShopName } = useCartStore();
 
-  const [selectedSlotId, setSelectedSlotId] = useState(mockSlots[0]?.id || '');
+  const [liveSlots, setLiveSlots] = useState([]);
+  const [selectedSlotId, setSelectedSlotId] = useState('');
   const [isBulkOrder, setIsBulkOrder] = useState(true);
   const [departmentNote, setDepartmentNote] = useState('Department Examination & Laboratory Consumables');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showAddMore, setShowAddMore] = useState(cartItems.length === 0);
 
-  if (cartItems.length === 0) {
-    return (
-      <FacultyLayout>
-        <div className="py-20 text-center max-w-[980px] mx-auto px-6 space-y-4">
-          <h2 className="text-display-md font-semibold text-ink">Your bag is empty.</h2>
-          <p className="text-body text-ink-muted-80">Add supplies before proceeding to checkout.</p>
-          <div className="pt-2">
-            <Button variant="primary" size="md" onClick={() => navigate(`/${role}/catalog`)}>
-              Browse Store
-            </Button>
-          </div>
-        </div>
-      </FacultyLayout>
-    );
-  }
+  useEffect(() => {
+    let isMounted = true;
+    getSlots()
+      .then((data) => {
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setLiveSlots(data);
+          setSelectedSlotId(data[0].id);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load slots for faculty checkout:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
-  const selectedSlot = mockSlots.find((s) => s.id === selectedSlotId) || mockSlots[0];
+  const displaySlots = liveSlots;
+
+  const effectiveTotal = cartTotal || cartItems.reduce((sum, ci) => sum + (Number(ci.price) || 0) * (Number(ci.quantity) || 1), 0);
+
+  const selectedSlot = useMemo(() => displaySlots.find((s) => s.id === selectedSlotId) || displaySlots[0], [displaySlots, selectedSlotId]);
+
+  const handleSelectProduct = (product, quantity = 1) => {
+    addItem(product, quantity);
+    toast.success('Product Added to Indent', `${quantity}x ${product.name} selected.`);
+  };
 
   const handleConfirmOrder = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+
+    if (cartItems.length === 0) {
+      toast.error('No Product Selected', 'Please select at least one stationery item before placing your indent order.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -53,6 +72,9 @@ export default function FacultyCheckoutPage() {
         userEmail: user?.email,
         userDepartment: user?.department || 'Department Indent',
         role: 'faculty',
+        shopId: cartShopId || (cartItems[0]?.shopId) || 'main-store',
+        shopName: cartShopName || (cartItems[0]?.shopName) || (typeof window !== 'undefined' ? localStorage.getItem('bsp_custom_shop_name') : '') || 'BIT Central Stationery Store',
+        counterLocation: 'Main Store (Main Academic Block)',
         pickupSlot: {
           date: selectedSlot.date,
           time: selectedSlot.time,
@@ -63,7 +85,7 @@ export default function FacultyCheckoutPage() {
           quantity: ci.quantity,
           price: ci.price,
         })),
-        total: cartTotal,
+        total: effectiveTotal,
         isBulkOrder,
         bulkNote: isBulkOrder ? departmentNote : null,
         remarks,
@@ -71,7 +93,7 @@ export default function FacultyCheckoutPage() {
 
       const created = await placeOrder(orderPayload);
       clearCart();
-      toast.success('Department Indent Confirmed', `Order #${created.id} forwarded to store.`);
+      toast.success('Department Indent Placed Directly', `Order #${created.id} forwarded to store.`);
       navigate(`/${role}/orders/${created.id}`);
     } catch (err) {
       toast.error('Indent Failed', err.message);
@@ -86,22 +108,132 @@ export default function FacultyCheckoutPage() {
         <div className="max-w-[1440px] mx-auto space-y-8">
           <div className="max-w-[980px] space-y-2">
             <Link
-              to={`/${role}/cart`}
+              to={`/${role}/catalog`}
               className="inline-flex items-center text-caption text-action-blue hover:underline mb-2"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Return to Bag
+              Return to Catalog
             </Link>
-            <h1 className="text-display-md sm:text-display-lg font-semibold tracking-tight text-ink">
-              Faculty Indent Confirmation.
-            </h1>
-            <p className="text-body text-ink-muted-80">
-              Confirm departmental billing allocation and scheduled collection at Priority Counter #2.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-display-md sm:text-display-lg font-semibold tracking-tight text-ink">
+                  Faculty Indent & Direct Checkout
+                </h1>
+                <p className="text-body text-ink-muted-80">
+                  Select stationery supplies below and place your institutional indent directly.
+                </p>
+              </div>
+
+              {cartItems.length > 0 && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={handleConfirmOrder}
+                  loading={submitting}
+                  icon={Zap}
+                >
+                  Place Indent Directly ({formatINR(cartTotal)})
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* Banner if empty */}
+          {cartItems.length === 0 && (
+            <div className="bg-white border border-hairline shadow-card rounded-lg p-5 flex items-start gap-3.5">
+              <div className="h-9 w-9 rounded-full bg-action-blue/10 flex items-center justify-center flex-shrink-0 text-action-blue">
+                <Info className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-body font-semibold text-ink">Direct Indent Ordering Active</h4>
+                <p className="text-caption text-ink-muted-80">
+                  Select stationery supplies from the catalog picker below to create and place your department pre-order directly.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleConfirmOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-8 space-y-6">
+              {/* Selected Items Card */}
+              {cartItems.length > 0 && (
+                <div className="bg-white p-6 sm:p-8 rounded-lg border border-hairline shadow-card space-y-4">
+                  <div className="flex items-center justify-between border-b border-hairline pb-4">
+                    <div className="flex items-center gap-2">
+                      <ShoppingBag className="h-5 w-5 text-action-blue" />
+                      <h3 className="text-tagline font-semibold text-ink">
+                        Selected Supplies ({cartItems.reduce((s, i) => s + i.quantity, 0)} items)
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddMore(!showAddMore)}
+                        className="text-caption font-semibold text-action-blue hover:underline"
+                      >
+                        {showAddMore ? 'Hide Product Picker' : '+ Select More Supplies'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearCart}
+                        className="text-caption text-[#ff4d8b] hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="h-3 w-3" /> Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-hairline">
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="h-12 w-12 rounded-lg object-cover border border-hairline flex-shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <span className="font-semibold text-body text-ink block truncate">
+                              {item.name}
+                            </span>
+                            <span className="text-caption text-ink-muted-80">
+                              {formatINR(item.price)} per unit
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <QuantitySelector
+                            quantity={item.quantity}
+                            onChange={(newQty) => updateQty(item.id, newQty)}
+                            min={1}
+                            max={Math.min(500, item.stock || 500)}
+                            size="sm"
+                          />
+                          <span className="text-body font-semibold text-ink w-16 text-right">
+                            {formatINR(item.price * item.quantity)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item.id)}
+                            className="text-ink-muted-80 hover:text-[#ff4d8b] transition-colors p-1"
+                            title="Remove item"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Selector Section */}
+              {(showAddMore || cartItems.length === 0) && (
+                <ProductSelector onSelectProduct={handleSelectProduct} />
+              )}
+
               {/* Department Mode Toggle */}
               <div className="bg-white p-6 sm:p-8 rounded-lg border border-hairline shadow-card space-y-4">
                 <div className="flex items-center justify-between">
@@ -142,19 +274,18 @@ export default function FacultyCheckoutPage() {
 
               {/* Pickup Window Selection */}
               <div className="bg-white p-6 sm:p-8 rounded-lg border border-hairline shadow-card space-y-4">
-                <h3 className="text-tagline font-semibold text-ink">Priority Counter #2 Windows</h3>
+                <h3 className="text-tagline font-semibold text-ink">Priority Desk #2 Windows</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {mockSlots.map((slot) => {
+                  {displaySlots.map((slot) => {
                     const isSelected = selectedSlotId === slot.id;
                     return (
                       <div
                         key={slot.id}
                         onClick={() => setSelectedSlotId(slot.id)}
-                        className={`p-5 rounded-lg border transition-all cursor-pointer ${
-                          isSelected
+                        className={`p-5 rounded-lg border transition-all cursor-pointer ${isSelected
                             ? 'border-action-blue outline outline-2 outline-focus-blue bg-white shadow-card'
                             : 'border-hairline hover:border-ink/40 bg-white'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between text-body font-semibold">
                           <span className="text-ink">{slot.date}</span>
@@ -186,14 +317,37 @@ export default function FacultyCheckoutPage() {
             {/* Side Card */}
             <div className="lg:col-span-4">
               <div className="bg-white p-6 sm:p-8 rounded-lg border border-hairline shadow-card space-y-5 sticky top-24">
-                <h3 className="text-tagline font-semibold text-ink border-b border-hairline pb-4">
-                  Indent Summary
+                <h3 className="text-tagline font-semibold text-ink border-b border-hairline pb-4 flex items-center justify-between">
+                  <span>Indent Summary</span>
+                  <span className="text-caption text-ink-muted-80 font-normal">
+                    {cartItems.reduce((s, i) => s + i.quantity, 0)} items
+                  </span>
                 </h3>
 
-                <div className="space-y-3 text-body text-ink-muted-80">
+                <div className="space-y-2 max-h-48 overflow-y-auto text-caption text-ink-muted-80 divide-y divide-hairline">
+                  {cartItems.length === 0 ? (
+                    <p className="text-caption text-ink-muted-80 py-2 text-center italic">
+                      Select items above to place order directly.
+                    </p>
+                  ) : (
+                    cartItems.map((item) => (
+                      <div key={item.id} className="pt-2 first:pt-0 flex justify-between">
+                        <div className="truncate pr-2">
+                          <p className="font-semibold text-ink truncate">{item.name}</p>
+                          <p className="text-ink-muted-80 text-fine-print">Qty: {item.quantity} × {formatINR(item.price)}</p>
+                        </div>
+                        <span className="font-semibold text-ink flex-shrink-0">
+                          {formatINR(item.price * item.quantity)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="space-y-2.5 text-caption text-ink-muted-80 pt-2 border-t border-hairline">
                   <div className="flex justify-between">
-                    <span>Counter Desk</span>
-                    <span className="font-semibold text-ink">Counter #2 (Faculty Priority)</span>
+                    <span>Pickup Desk</span>
+                    <span className="font-semibold text-ink">Desk #2 (Priority)</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Pickup Window</span>
@@ -203,17 +357,22 @@ export default function FacultyCheckoutPage() {
 
                 <div className="pt-4 border-t border-hairline flex justify-between items-baseline">
                   <span className="text-body font-semibold text-ink">Total Allocation</span>
-                  <span className="text-display-md font-semibold text-ink">{formatINR(cartTotal)}</span>
+                  <span className="text-display-md font-semibold text-ink">{formatINR(effectiveTotal)}</span>
                 </div>
 
                 <Button
-                  type="submit"
+                  type="button"
                   variant="primary"
                   size="lg"
-                  className="w-full font-normal"
+                  className="w-full font-semibold"
+                  disabled={cartItems.length === 0}
                   loading={submitting}
+                  onClick={handleConfirmOrder}
+                  icon={Zap}
                 >
-                  Submit Indent
+                  {cartItems.length === 0
+                    ? 'Select Supplies Above'
+                    : `Place Order Directly (${formatINR(effectiveTotal)})`}
                 </Button>
               </div>
             </div>
@@ -223,3 +382,4 @@ export default function FacultyCheckoutPage() {
     </FacultyLayout>
   );
 }
+

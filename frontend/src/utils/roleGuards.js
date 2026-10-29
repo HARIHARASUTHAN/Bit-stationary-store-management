@@ -6,6 +6,7 @@ export const ROLE_HOME_ROUTES = {
 };
 
 export const ALLOWED_DOMAINS = [
+  'bitsathy.ac.in',
   'student.ac.in',
   'faculty.ac.in',
   'shopadmin.ac.in',
@@ -14,18 +15,21 @@ export const ALLOWED_DOMAINS = [
 
 export function validateEmailDomain(email) {
   if (!email) return false;
-  const domain = email.split('@')[1];
+  const clean = email.toLowerCase().trim();
+  const domain = clean.split('@')[1];
   return ALLOWED_DOMAINS.includes(domain);
 }
 
 export function getRoleFromEmail(email) {
   if (!email) return null;
-  const domain = email.split('@')[1];
+  const clean = email.toLowerCase().trim();
+  const domain = clean.split('@')[1];
   const map = {
+    'bitsathy.ac.in': 'student',
     'student.ac.in': 'student',
     'faculty.ac.in': 'faculty',
     'shopadmin.ac.in': 'shopadmin',
     'admin.ac.in': 'admin',
   };
-  return map[domain] || null;
+  return map[domain] || 'student';
 }

@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
               <Input
                 label="Institutional Email"
                 type="email"
-                placeholder="rollno@student.ac.in"
+                placeholder="rollno@bitsathy.ac.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

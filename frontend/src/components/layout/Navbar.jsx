@@ -4,13 +4,15 @@ import { useAuth } from '@/context/AuthContext';
 import useCartStore from '@/hooks/useCart';
 import Avatar from '@/components/ui/Avatar';
 import Badge from '@/components/ui/Badge';
-import { ShoppingBag, LogOut, Menu, X, Sparkles } from 'lucide-react';
+import { ShoppingBag, LogOut, Menu, X, Sparkles, User } from 'lucide-react';
 
 export default function Navbar({ navLinks = [], showCart = false }) {
   const { user, role, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const cartCount = useCartStore((s) => s.cartCount);
+  const cartItems = useCartStore((s) => s.cartItems);
+  const rawCartCount = useCartStore((s) => s.cartCount);
+  const cartCount = rawCartCount || (Array.isArray(cartItems) ? cartItems.reduce((sum, ci) => sum + (Number(ci.quantity) || 1), 0) : 0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -129,6 +131,13 @@ export default function Navbar({ navLinks = [], showCart = false }) {
                       </Badge>
                     </span>
                   </div>
+                  <Link
+                    to={`/${role}/profile`}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-medium text-[#0a0a0a] hover:bg-[#faf5e8] transition-colors border-b border-[#e5e5e5]"
+                  >
+                    <User className="h-3.5 w-3.5 text-[#1a3a3a]" />
+                    My Profile
+                  </Link>
                   <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#ff4d8b] hover:bg-[#faf5e8] transition-colors"

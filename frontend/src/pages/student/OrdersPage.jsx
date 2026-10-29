@@ -1,24 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import StudentLayout from '@/components/layout/StudentLayout';
 import OrderCard from '@/components/orders/OrderCard';
 import EmptyState from '@/components/ui/EmptyState';
 import { mockOrders } from '@/mocks/orders';
+import { getOrders } from '@/services/orderService';
 import { useAuth } from '@/context/AuthContext';
 import { Clock } from 'lucide-react';
 
 export default function StudentOrdersPage() {
   const { user, role } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All');
 
-  // Filter orders belonging to this user
-  const userOrders = mockOrders.filter(
-    (o) => o.userId === user?.uid || o.userEmail === user?.email
-  );
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    getOrders({ userId: user?.uid, email: user?.email })
+      .then((data) => {
+        if (isMounted) {
+          setOrders(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load orders:', err);
+        if (isMounted) {
+          setOrders([]);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [user?.uid, user?.email]);
 
   const statuses = ['All', 'Pending', 'Approved', 'Ready', 'Collected', 'Cancelled'];
 
-  const filtered = userOrders.filter((order) =>
+  const filtered = orders.filter((order) =>
     filterStatus === 'All' ? true : order.status === filterStatus
   );
 
@@ -29,7 +49,7 @@ export default function StudentOrdersPage() {
           <div>
             <h1 className="text-3xl font-medium tracking-[-1.5px] text-[#0a0a0a]">My Pre-Orders</h1>
             <p className="text-xs text-[#6a6a6a] mt-1">
-              Track status, pickup windows, and printable vouchers for campus counter collection
+              Track status, pickup windows, and printable vouchers for campus store collection
             </p>
           </div>
           <Link

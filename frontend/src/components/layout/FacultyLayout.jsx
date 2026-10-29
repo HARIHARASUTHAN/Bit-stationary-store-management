@@ -17,10 +17,10 @@ export default function FacultyLayout({ children }) {
         <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
           <span className="flex items-center gap-2 font-medium">
             <Building2 className="h-4 w-4 text-[#0a0a0a]" />
-            Faculty Requisition Desk: Bulk department orders & express counter dispatch enabled
+            Faculty Requisition Desk: Bulk department orders & express store dispatch enabled
           </span>
           <span className="hidden sm:inline font-semibold text-[#0a0a0a] bg-[#ffb084]/40 px-2 py-0.5 rounded-full text-[10px]">
-            Priority Counter #2
+            Priority Desk #2
           </span>
         </div>
       </div>

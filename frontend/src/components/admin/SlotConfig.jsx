@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
-import { Calendar, Plus, Clock, Users } from 'lucide-react';
+import { Calendar, Plus, Clock, Trash2 } from 'lucide-react';
 
-export default function SlotConfig({ slots = [], onAddSlot }) {
+export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     date: '2026-09-11',
@@ -35,29 +35,49 @@ export default function SlotConfig({ slots = [], onAddSlot }) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {slots.map((slot) => {
-          const isFull = slot.booked >= slot.capacity;
-          const pct = Math.round((slot.booked / slot.capacity) * 100);
+      {slots.length === 0 ? (
+        <div className="bg-white p-12 text-center rounded-xl border border-dashed border-gray-200">
+          <Calendar className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm font-medium text-gray-600">No pickup slots configured</p>
+          <p className="text-xs text-gray-400 mt-1">Create store pickup windows to allow student booking</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {slots.map((slot) => {
+            const isFull = slot.booked >= slot.capacity;
+            const pct = Math.round((slot.booked / slot.capacity) * 100);
 
-          return (
-            <div
-              key={slot.id}
-              className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm space-y-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs font-semibold text-[#1e3a5f]">
-                  <Calendar className="h-4 w-4 text-teal-600" />
-                  <span>{slot.date}</span>
+            return (
+              <div
+                key={slot.id}
+                className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm space-y-3 relative group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-[#1e3a5f]">
+                    <Calendar className="h-4 w-4 text-teal-600" />
+                    <span>{slot.date}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      }`}
+                    >
+                      {isFull ? 'FULL' : `${slot.capacity - slot.booked} left`}
+                    </span>
+                    {onDeleteSlot && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteSlot(slot)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete slot"
+                        aria-label={`Delete slot ${slot.time} on ${slot.date}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                  }`}
-                >
-                  {isFull ? 'FULL' : `${slot.capacity - slot.booked} slots left`}
-                </span>
-              </div>
 
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                 <Clock className="h-4 w-4 text-gray-400" />
@@ -81,7 +101,8 @@ export default function SlotConfig({ slots = [], onAddSlot }) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       <Modal
         isOpen={modalOpen}

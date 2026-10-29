@@ -1,52 +1,7 @@
 import { db, isFirebaseConnected } from '../config/firebase.js';
 
-// Default in-memory stationery catalog for instant local dev & fallback
-let memoryInventory = [
-  {
-    id: 'i1',
-    name: 'Classmate Spiral Notebook',
-    category: 'Notebooks & Paper',
-    price: 65,
-    stock: 120,
-    lowStockThreshold: 20,
-    description: '200 pages, A4 size, single line ruled. Spiral bound for smooth page turning. Ideal for engineering lecture notes.',
-    image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-    sku: 'NB-001',
-  },
-  {
-    id: 'i2',
-    name: 'Reynolds Pen (Blue)',
-    category: 'Writing Instruments',
-    price: 12,
-    stock: 350,
-    lowStockThreshold: 50,
-    description: 'Smooth-writing ballpoint pen, blue ink. Comfortable grip for exams and daily note-taking. Pack of 1.',
-    image: 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=600&auto=format&fit=crop&q=80',
-    sku: 'WI-001',
-  },
-  {
-    id: 'i3',
-    name: 'Reynolds Pen (Black)',
-    category: 'Writing Instruments',
-    price: 12,
-    stock: 280,
-    lowStockThreshold: 50,
-    description: 'Smooth-writing ballpoint pen, black ink. Dark waterproof ink ideal for official records and diagrams.',
-    image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?w=600&auto=format&fit=crop&q=80',
-    sku: 'WI-002',
-  },
-  {
-    id: 'i4',
-    name: 'Apsara Pencil (HB)',
-    category: 'Writing Instruments',
-    price: 8,
-    stock: 500,
-    lowStockThreshold: 100,
-    description: 'HB grade pencil for technical engineering drawing, drafting, and general campus note-taking.',
-    image: 'https://images.unsplash.com/photo-1595584354232-f07d525d87c1?w=600&auto=format&fit=crop&q=80',
-    sku: 'WI-003',
-  },
-];
+// Default in-memory stationery catalog fallback
+export let memoryInventory = [];
 
 /**
  * GET /api/inventory

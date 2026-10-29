@@ -14,6 +14,15 @@ export async function getItems(params = {}) {
   return res.data;
 }
 
+export async function getItemById(id) {
+  if (USE_MOCK) {
+    const items = await mockGetItems();
+    return items.find((i) => i.id === id) || null;
+  }
+  const res = await api.get(`/inventory/${id}`);
+  return res.data;
+}
+
 export async function addItem(itemData) {
   if (USE_MOCK) return mockAddItem(itemData);
   const res = await api.post('/inventory', itemData);

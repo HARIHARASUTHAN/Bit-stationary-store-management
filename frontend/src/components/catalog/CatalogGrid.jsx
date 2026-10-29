@@ -4,7 +4,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import { PackageSearch } from 'lucide-react';
 
-export default function CatalogGrid({ items = [], loading = false, onResetFilters }) {
+export default function CatalogGrid({ items = [], loading = false, onResetFilters, activeShop = null }) {
   if (loading) {
     return <SkeletonLoader count={8} />;
   }
@@ -24,7 +24,7 @@ export default function CatalogGrid({ items = [], loading = false, onResetFilter
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
       {items.map((item) => (
-        <ItemCard key={item.id} item={item} />
+        <ItemCard key={item.id} item={item} activeShop={activeShop} />
       ))}
     </div>
   );

@@ -6,6 +6,7 @@ export default function Input({
   helperText,
   icon: Icon,
   endIcon: EndIcon,
+  endAction,
   className = '',
   wrapperClassName = '',
   required = false,
@@ -33,14 +34,18 @@ export default function Input({
             error
               ? 'border-[#ef4444] focus:border-[#ef4444] focus:ring-[#ef4444]'
               : 'border-[#e5e5e5] focus:border-[#0a0a0a] focus:ring-[#0a0a0a]'
-          } ${Icon ? 'pl-10' : 'pl-4'} ${EndIcon ? 'pr-10' : 'pr-4'} py-2.5 text-sm text-[#0a0a0a] placeholder-[#9a9a9a] focus:outline-none focus:ring-1 transition-all ${className}`}
+          } ${Icon ? 'pl-10' : 'pl-4'} ${EndIcon || endAction ? 'pr-11' : 'pr-4'} py-2.5 text-sm text-[#0a0a0a] placeholder-[#9a9a9a] focus:outline-none focus:ring-1 transition-all ${className}`}
           {...props}
         />
-        {EndIcon && (
+        {endAction ? (
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+            {endAction}
+          </div>
+        ) : EndIcon ? (
           <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#9a9a9a]">
             <EndIcon className="h-4 w-4" />
           </div>
-        )}
+        ) : null}
       </div>
       {error ? (
         <p className="mt-1 text-xs text-[#ef4444]">{error}</p>

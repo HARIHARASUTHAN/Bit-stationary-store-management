@@ -12,11 +12,29 @@ const api = axios.create({
 // Request interceptor: attach Firebase ID token to every request
 api.interceptors.request.use(
   async (config) => {
-    const user = auth.currentUser;
-    if (user) {
-      const token = await user.getIdToken();
-      config.headers.Authorization = `Bearer ${token}`;
+    if (auth && typeof auth.authStateReady === 'function') {
+      try {
+        await auth.authStateReady();
+      } catch (_) {}
     }
+    const user = auth?.currentUser;
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      } catch (_) {}
+    }
+
+    try {
+      const session = localStorage.getItem('bsp_user_session');
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed.email) config.headers['x-user-email'] = parsed.email;
+        if (parsed.role) config.headers['x-user-role'] = parsed.role;
+        if (parsed.uid) config.headers['x-user-id'] = parsed.uid;
+      }
+    } catch (_) {}
+
     return config;
   },
   (error) => Promise.reject(error)

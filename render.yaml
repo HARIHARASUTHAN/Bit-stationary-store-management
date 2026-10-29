@@ -1,0 +1,64 @@
+services:
+  # =========================================================
+  # 1. BACKEND API SERVICE (Express + Node.js)
+  # =========================================================
+  - type: web
+    name: bit-stationery-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CLIENT_ORIGIN
+        sync: false
+      # Firebase Credentials (set in Render Dashboard)
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      # Or optionally paste the whole JSON into:
+      # - key: FIREBASE_SERVICE_ACCOUNT_KEY
+      #   sync: false
+
+  # =========================================================
+  # 2. FRONTEND STATIC SITE (Vite + React SPA)
+  # =========================================================
+  - type: web
+    name: bit-stationery-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      # React Router SPA catch-all rewrite: prevents 404 on refresh
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # API URL: point to backend service e.g. https://bit-stationery-backend.onrender.com/api
+      - key: VITE_API_BASE_URL
+        sync: false
+      # Firebase Web Config (from Firebase Console Project Settings)
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false
+      - key: VITE_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: VITE_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: VITE_FIREBASE_APP_ID
+        sync: false
+      - key: VITE_USE_MOCK_API
+        value: "false"
+

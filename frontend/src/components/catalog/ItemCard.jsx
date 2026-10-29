@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import StockBadge from './StockBadge';
 import QuantitySelector from './QuantitySelector';
 import Button from '@/components/ui/Button';
 import { formatINR } from '@/utils/currency';
 import useCartStore from '@/hooks/useCart';
 import { useToast } from '@/components/ui/ToastProvider';
-import { ShoppingBag, Check } from 'lucide-react';
+import { ShoppingBag, Check, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export default function ItemCard({ item }) {
+export default function ItemCard({ item, activeShop = null }) {
   const { role } = useAuth();
+  const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore((s) => s.addItem);
@@ -24,13 +25,21 @@ export default function ItemCard({ item }) {
   }, [item.image]);
 
   const handleAddToCart = () => {
-    addItem(item, qty);
+    addItem(item, qty, activeShop);
     setAdded(true);
     toast.success('Added to Pre-Order Tray', `${qty}x ${item.name} reserved.`);
     setTimeout(() => setAdded(false), 1500);
   };
 
-  const isOutOfStock = item.stock <= 0;
+  const handleDirectOrder = () => {
+    addItem(item, qty, activeShop);
+    navigate(`/${role}/checkout`);
+  };
+
+  const currentStock = (activeShop?.id && item.shopStocks && typeof item.shopStocks[activeShop.id] === 'number')
+    ? item.shopStocks[activeShop.id]
+    : (typeof item.stock === 'number' ? item.stock : 0);
+  const isOutOfStock = currentStock <= 0;
 
   return (
     <div className="group bg-[#fffaf0] rounded-[16px] border border-[#e5e5e5] hover:border-[#0a0a0a] transition-all flex flex-col overflow-hidden">
@@ -44,7 +53,7 @@ export default function ItemCard({ item }) {
           loading="lazy"
         />
         <div className="absolute top-2.5 right-2.5">
-          <StockBadge stock={item.stock} lowStockThreshold={item.lowStockThreshold} />
+          <StockBadge stock={currentStock} lowStockThreshold={item.lowStockThreshold} />
         </div>
         <div className="absolute top-2.5 left-2.5">
           <span className="text-[10px] uppercase tracking-[1px] font-semibold bg-[#fffaf0]/90 backdrop-blur-xs text-[#0a0a0a] px-2 py-0.5 rounded-full border border-[#e5e5e5]">
@@ -60,7 +69,7 @@ export default function ItemCard({ item }) {
             {item.category}
           </span>
           <Link
-            to={`/${role}/catalog/${item.id}`}
+            to={`/${role}/catalog/${item.id}${activeShop?.id ? `?shop=${encodeURIComponent(activeShop.id)}` : ''}`}
             className="text-sm font-semibold text-[#0a0a0a] group-hover:text-[#ff4d8b] transition-colors line-clamp-1"
           >
             {item.name}
@@ -70,31 +79,45 @@ export default function ItemCard({ item }) {
           </p>
         </div>
 
-        <div className="mt-3.5 pt-3 border-t border-[#e5e5e5] flex items-center justify-between">
-          <div>
-            <span className="text-[9px] text-[#9a9a9a] uppercase tracking-wider block">Price</span>
-            <span className="text-lg font-medium tracking-tight text-[#0a0a0a]">
-              {formatINR(item.price)}
-            </span>
-          </div>
+        <div className="mt-3.5 pt-3 border-t border-[#e5e5e5] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[9px] text-[#9a9a9a] uppercase tracking-wider block">Price</span>
+              <span className="text-lg font-medium tracking-tight text-[#0a0a0a]">
+                {formatINR(item.price)}
+              </span>
+            </div>
 
-          <div className="flex items-center gap-1.5">
             {!isOutOfStock && (
               <QuantitySelector
                 quantity={qty}
                 onChange={setQty}
-                max={Math.min(10, item.stock)}
+                max={Math.min(10, currentStock)}
                 size="sm"
               />
             )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
             <Button
-              variant={added ? 'on-color' : 'primary'}
-              size="sm"
+              variant="secondary"
+              size="xs"
               disabled={isOutOfStock}
               onClick={handleAddToCart}
               icon={added ? Check : ShoppingBag}
+              className="text-xs"
             >
-              {added ? 'Added' : 'Reserve'}
+              {added ? 'Added' : 'Tray'}
+            </Button>
+            <Button
+              variant="primary"
+              size="xs"
+              disabled={isOutOfStock}
+              onClick={handleDirectOrder}
+              icon={Zap}
+              className="text-xs bg-[#1a3a3a] hover:bg-[#254d4d]"
+            >
+              Order Now
             </Button>
           </div>
         </div>
@@ -102,3 +125,4 @@ export default function ItemCard({ item }) {
     </div>
   );
 }
+

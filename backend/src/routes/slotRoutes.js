@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSlots, addSlot, updateSlot } from '../controllers/slotController.js';
+import { getSlots, addSlot, updateSlot, deleteSlot } from '../controllers/slotController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 import { requireRole } from '../middleware/roleGuard.js';
 
@@ -11,5 +11,6 @@ router.get('/', getSlots);
 // Manage slots (shopadmin & admin)
 router.post('/', authenticate, requireRole(['shopadmin', 'admin']), addSlot);
 router.put('/:id', authenticate, requireRole(['shopadmin', 'admin']), updateSlot);
+router.delete('/:id', authenticate, requireRole(['shopadmin', 'admin']), deleteSlot);
 
 export default router;

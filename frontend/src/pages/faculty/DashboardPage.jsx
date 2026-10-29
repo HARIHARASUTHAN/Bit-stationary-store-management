@@ -1,25 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import FacultyLayout from '@/components/layout/FacultyLayout';
 import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
 import ItemCard from '@/components/catalog/ItemCard';
 import { useAuth } from '@/context/AuthContext';
-import { mockItems } from '@/mocks/items';
-import mockOrders from '@/mocks/orders';
+import { getOrders } from '@/services/orderService';
+import { getItems } from '@/services/inventoryService';
 import { ShoppingBag, Clock, Building2, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 
 export default function FacultyDashboardPage() {
   const { user } = useAuth();
+  const [orders, setOrders] = useState([]);
+  const [items, setItems] = useState([]);
 
-  const myOrders = mockOrders.filter((o) => o.userEmail === user?.email || o.role === 'faculty');
+  useEffect(() => {
+    let isMounted = true;
+    getOrders({ email: user?.email })
+      .then((data) => {
+        if (isMounted) setOrders(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {});
+
+    getItems()
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) setItems(data);
+      })
+      .catch(() => {});
+
+    return () => { isMounted = false; };
+  }, [user?.email]);
+
+  const myOrders = orders;
   const bulkOrders = myOrders.filter((o) => o.isBulkOrder);
-  const featuredItems = [
-    mockItems.find((i) => i.id === 'i20') || mockItems[0],
-    mockItems.find((i) => i.id === 'i26') || mockItems[1],
-    mockItems.find((i) => i.id === 'i18') || mockItems[2],
-    mockItems.find((i) => i.id === 'i1') || mockItems[3],
-  ];
+  const featuredItems = items.slice(0, 4);
 
   return (
     <FacultyLayout>
@@ -37,7 +51,7 @@ export default function FacultyDashboardPage() {
             </h1>
 
             <p className="text-base text-[#6a6a6a] max-w-xl font-normal leading-relaxed">
-              Order classroom chalk, dry-erase markers, test booklets, graph sheets, and laboratory consumables with priority counter dispatch and bulk departmental billing.
+              Order classroom chalk, dry-erase markers, test booklets, graph sheets, and laboratory consumables with priority store dispatch and bulk departmental billing.
             </p>
 
             <div className="pt-2 flex flex-wrap gap-3">
@@ -59,12 +73,12 @@ export default function FacultyDashboardPage() {
             <div className="bg-[#1a3a3a] text-white p-8 rounded-[24px] space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#ffb084]">
-                  Counter Clearance
+                  Store Clearance
                 </span>
                 <span className="h-2.5 w-2.5 rounded-full bg-[#ffb084]"></span>
               </div>
               <h3 className="text-2xl font-medium tracking-[-1px] text-white">
-                Priority Counter #2 Open
+                Priority Desk #2 Open
               </h3>
               <p className="text-xs text-white/80 leading-relaxed">
                 Faculty indents are prepared by dedicated dispatch operators for express handover.
@@ -101,7 +115,7 @@ export default function FacultyDashboardPage() {
             color="lavender"
           />
           <StatCard
-            title="Counter Desk"
+            title="Pickup Desk"
             value="Desk #2"
             subtitle="Express academic pickup"
             icon={CheckCircle2}

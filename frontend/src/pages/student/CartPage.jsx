@@ -13,6 +13,9 @@ export default function StudentCartPage() {
   const { role } = useAuth();
   const { cartItems, updateQty, removeItem, clearCart, cartTotal, cartCount } = useCartStore();
 
+  const effectiveCount = cartCount || cartItems.reduce((sum, ci) => sum + (Number(ci.quantity) || 1), 0);
+  const effectiveTotal = cartTotal || cartItems.reduce((sum, ci) => sum + (Number(ci.price) || 0) * (Number(ci.quantity) || 1), 0);
+
   return (
     <StudentLayout>
       <div className="space-y-6">
@@ -20,7 +23,7 @@ export default function StudentCartPage() {
           <div>
             <h1 className="text-3xl font-medium tracking-[-1.5px] text-[#0a0a0a]">Pre-Order Tray</h1>
             <p className="text-xs text-[#6a6a6a] mt-1">
-              Review reserved stationery items before selecting a counter pickup window
+              Review reserved stationery items before selecting a pickup window
             </p>
           </div>
           {cartItems.length > 0 && (
@@ -75,7 +78,7 @@ export default function StudentCartPage() {
 
             {/* Order Summary Box */}
             <div>
-              <CartSummary total={cartTotal} itemCount={cartCount} />
+              <CartSummary total={effectiveTotal} itemCount={effectiveCount} />
             </div>
           </div>
         )}

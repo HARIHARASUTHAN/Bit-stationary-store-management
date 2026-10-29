@@ -1,13 +1,28 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import AuditLogTable from '@/components/admin/AuditLogTable';
-import { mockAuditLog } from '@/mocks/auditLog';
+import { getAuditLogs } from '@/services/reportService';
 import Button from '@/components/ui/Button';
 import { Download } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 
 export default function AdminAuditLogPage() {
+  const [logs, setLogs] = useState([]);
   const toast = useToast();
+
+  useEffect(() => {
+    let isMounted = true;
+    getAuditLogs()
+      .then((data) => {
+        if (isMounted) {
+          setLogs(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLogs([]);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const handleExport = () => {
     toast.success('Audit Trail Dispatched', 'Audit log export downloaded as CSV.');
@@ -30,7 +45,7 @@ export default function AdminAuditLogPage() {
           </Button>
         </div>
 
-        <AuditLogTable logs={mockAuditLog} />
+        <AuditLogTable logs={logs} />
       </div>
     </AdminLayout>
   );

@@ -61,7 +61,7 @@ export default function AdminSettingsPage() {
         <div className="bg-white p-5 rounded-xl border border-gray-200/80 shadow-sm space-y-4">
           <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
             <Clock className="h-4 w-4 text-teal-600" />
-            Counter Cutoff & Ordering Windows
+            Store Cutoff & Ordering Windows
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -77,7 +77,7 @@ export default function AdminSettingsPage() {
               type="number"
               value={maxAdvanceDays}
               onChange={(e) => setMaxAdvanceDays(e.target.value)}
-              helperText="How far ahead students/faculty can schedule counter pickup"
+              helperText="How far ahead students/faculty can schedule store pickup"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function AdminSettingsPage() {
             <label className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer">
               <div>
                 <p className="text-xs font-semibold text-gray-900">Dedicated Faculty Priority Lane</p>
-                <p className="text-[11px] text-gray-500">Reserve Counter #2 for faculty department indents</p>
+                <p className="text-[11px] text-gray-500">Reserve Priority Desk #2 for faculty department indents</p>
               </div>
               <input
                 type="checkbox"

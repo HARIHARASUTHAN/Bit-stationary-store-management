@@ -19,6 +19,7 @@ const StudentCart = lazy(() => import('@/pages/student/CartPage'));
 const StudentCheckout = lazy(() => import('@/pages/student/CheckoutPage'));
 const StudentOrders = lazy(() => import('@/pages/student/OrdersPage'));
 const StudentOrderDetail = lazy(() => import('@/pages/student/OrderDetailPage'));
+const StudentProfile = lazy(() => import('@/pages/student/ProfilePage'));
 
 // Faculty Pages
 const FacultyDashboard = lazy(() => import('@/pages/faculty/DashboardPage'));
@@ -30,13 +31,13 @@ const ShopAdminInventory = lazy(() => import('@/pages/shopadmin/InventoryPage'))
 const ShopAdminOrders = lazy(() => import('@/pages/shopadmin/OrdersPage'));
 const ShopAdminSlots = lazy(() => import('@/pages/shopadmin/SlotsPage'));
 const ShopAdminReports = lazy(() => import('@/pages/shopadmin/ReportsPage'));
+const ShopAdminProfile = lazy(() => import('@/pages/shopadmin/ProfilePage'));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import('@/pages/admin/DashboardPage'));
 const AdminAccounts = lazy(() => import('@/pages/admin/AccountsPage'));
 const AdminSettings = lazy(() => import('@/pages/admin/SettingsPage'));
 const AdminAuditLog = lazy(() => import('@/pages/admin/AuditLogPage'));
-const AdminReports = lazy(() => import('@/pages/admin/ReportsPage'));
 
 const SuspenseWrapper = ({ children }) => (
   <Suspense fallback={
@@ -80,6 +81,7 @@ export default function AppRouter() {
               <Route path="checkout" element={<StudentCheckout />} />
               <Route path="orders" element={<StudentOrders />} />
               <Route path="orders/:orderId" element={<StudentOrderDetail />} />
+              <Route path="profile" element={<StudentProfile />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Routes>
           </SuspenseWrapper>
@@ -98,6 +100,7 @@ export default function AppRouter() {
               <Route path="checkout" element={<FacultyCheckout />} />
               <Route path="orders" element={<StudentOrders />} />
               <Route path="orders/:orderId" element={<StudentOrderDetail />} />
+              <Route path="profile" element={<StudentProfile />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Routes>
           </SuspenseWrapper>
@@ -114,6 +117,7 @@ export default function AppRouter() {
               <Route path="orders" element={<ShopAdminOrders />} />
               <Route path="slots" element={<ShopAdminSlots />} />
               <Route path="reports" element={<ShopAdminReports />} />
+              <Route path="profile" element={<ShopAdminProfile />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Routes>
           </SuspenseWrapper>
@@ -129,7 +133,6 @@ export default function AppRouter() {
               <Route path="accounts" element={<AdminAccounts />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
-              <Route path="reports" element={<AdminReports />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Routes>
           </SuspenseWrapper>

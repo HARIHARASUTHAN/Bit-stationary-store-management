@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
-import { LayoutDashboard, Package, ClipboardList, Calendar, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Calendar, UserCog, BarChart3 } from 'lucide-react';
 
 export default function ShopAdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const links = [
-    { to: '/shopadmin/dashboard', label: 'Counter Dashboard', icon: LayoutDashboard },
+    { to: '/shopadmin/dashboard', label: 'Store Dashboard', icon: LayoutDashboard },
     { to: '/shopadmin/inventory', label: 'Stationery Inventory', icon: Package },
     { to: '/shopadmin/orders', label: 'Order Dispatch Queue', icon: ClipboardList },
     { to: '/shopadmin/slots', label: 'Pickup Slot Windows', icon: Calendar },
-    { to: '/shopadmin/reports', label: 'Department Reports', icon: BarChart3 },
+    { to: '/shopadmin/reports', label: 'Export Reports', icon: BarChart3 },
+    { to: '/shopadmin/profile', label: 'Profile & Shop Name', icon: UserCog },
   ];
 
   return (

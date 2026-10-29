@@ -5,6 +5,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { formatINR } from '@/utils/currency';
 import { formatDateTime } from '@/utils/formatDate';
+import { getOrderPeriodStats } from '@/utils/orderPeriodStats';
 import { useToast } from '@/components/ui/ToastProvider';
 import {
   IndianRupee,
@@ -21,27 +22,38 @@ import {
 } from 'lucide-react';
 
 export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
+  const [periodFilter, setPeriodFilter] = useState('all'); // 'all' | 'daily' | 'weekly' | 'monthly'
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger' | 'breakdown'
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [roleFilter, setRoleFilter] = useState('All'); // 'All' | 'student' | 'faculty'
   const toast = useToast();
 
+  const periodStats = useMemo(() => getOrderPeriodStats(orders), [orders]);
+
+  const activePeriodOrders = useMemo(() => {
+    if (periodFilter === 'daily') return periodStats.daily.orders;
+    if (periodFilter === 'weekly') return periodStats.weekly.orders;
+    if (periodFilter === 'monthly') return periodStats.monthly.orders;
+    return orders;
+  }, [orders, periodFilter, periodStats]);
+
   // Financial Metrics
   const metrics = useMemo(() => {
-    const validOrders = orders.filter((o) => o.status !== 'Cancelled');
-    const totalGross = validOrders.reduce((sum, o) => sum + o.total, 0);
+    const validOrders = orders.filter((o) => (o.status || '').toLowerCase() !== 'cancelled');
+    const totalGross = validOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    const collectedOrders = orders.filter((o) => o.status === 'Collected');
-    const collectedTotal = collectedOrders.reduce((sum, o) => sum + o.total, 0);
+    const collectedOrders = orders.filter((o) => (o.status || '').toLowerCase() === 'collected');
+    const collectedTotal = collectedOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    const inPipelineOrders = orders.filter(
-      (o) => o.status === 'Ready' || o.status === 'Approved'
-    );
-    const inPipelineTotal = inPipelineOrders.reduce((sum, o) => sum + o.total, 0);
+    const inPipelineOrders = orders.filter((o) => {
+      const s = (o.status || '').toLowerCase();
+      return s === 'ready' || s === 'approved';
+    });
+    const inPipelineTotal = inPipelineOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
-    const pendingOrders = orders.filter((o) => o.status === 'Pending');
-    const pendingTotal = pendingOrders.reduce((sum, o) => sum + o.total, 0);
+    const pendingOrders = orders.filter((o) => (o.status || '').toLowerCase() === 'pending');
+    const pendingTotal = pendingOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
     const facultyOrders = validOrders.filter((o) => o.role === 'faculty' || o.isBulkOrder);
     const facultyTotal = facultyOrders.reduce((sum, o) => sum + o.total, 0);
@@ -121,8 +133,8 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
 
   // Filtered Orders for the Ledger
   const filteredOrders = useMemo(() => {
-    return orders.filter((o) => {
-      const matchStatus = statusFilter === 'All' ? true : o.status === statusFilter;
+    return activePeriodOrders.filter((o) => {
+      const matchStatus = statusFilter === 'All' ? true : (o.status || '').toLowerCase() === statusFilter.toLowerCase();
       const matchRole =
         roleFilter === 'All'
           ? true
@@ -134,13 +146,13 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
       const matchSearch =
         !q ||
         o.id.toLowerCase().includes(q) ||
-        o.userName.toLowerCase().includes(q) ||
+        (o.userName && o.userName.toLowerCase().includes(q)) ||
         (o.userDepartment && o.userDepartment.toLowerCase().includes(q)) ||
-        o.items?.some((i) => i.name.toLowerCase().includes(q));
+        o.items?.some((i) => i.name?.toLowerCase().includes(q));
 
       return matchStatus && matchRole && matchSearch;
     });
-  }, [orders, statusFilter, roleFilter, search]);
+  }, [activePeriodOrders, statusFilter, roleFilter, search]);
 
   const filteredTotal = filteredOrders.reduce((sum, o) => sum + o.total, 0);
 
@@ -179,7 +191,7 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
       isOpen={isOpen}
       onClose={onClose}
       title="Store Revenue & Earnings Audit"
-      subtitle="Comprehensive breakdown of campus counter collections, faculty requisitions, and pending realization"
+      subtitle="Comprehensive breakdown of campus store collections, faculty requisitions, and pending realization"
       maxWidth="max-w-5xl"
       footer={
         <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -201,6 +213,126 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
       }
     >
       <div className="space-y-6 max-h-[72vh] overflow-y-auto pr-1">
+        {/* Daily, Weekly & Monthly Revenue Earned Section */}
+        <div className="space-y-3 bg-[#faf5e8] p-4 rounded-[20px] border border-[#e5e5e5]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-[#ff4d8b]" />
+              <span className="text-xs font-semibold uppercase tracking-[1px] text-[#0a0a0a]">
+                Revenue Earned Breakdown (Daily • Weekly • Monthly)
+              </span>
+            </div>
+            <div className="flex items-center gap-1 bg-[#fffaf0] p-1 rounded-[10px] border border-[#e5e5e5] text-xs">
+              <span className="text-[10px] font-semibold text-[#6a6a6a] px-1.5">Period:</span>
+              {[
+                { id: 'all', label: 'All Time' },
+                { id: 'daily', label: 'Daily (Today)' },
+                { id: 'weekly', label: 'Weekly (7 Days)' },
+                { id: 'monthly', label: 'Monthly (30 Days)' },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPeriodFilter(p.id)}
+                  className={`px-2.5 py-1 rounded-[8px] text-xs font-medium transition-all ${
+                    periodFilter === p.id
+                      ? 'bg-[#0a0a0a] text-white shadow-xs'
+                      : 'text-[#6a6a6a] hover:text-[#0a0a0a]'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Daily Revenue Card */}
+            <div
+              onClick={() => setPeriodFilter(periodFilter === 'daily' ? 'all' : 'daily')}
+              className={`p-4 rounded-[16px] border cursor-pointer transition-all ${
+                periodFilter === 'daily'
+                  ? 'bg-[#0a0a0a] text-white border-[#0a0a0a] shadow-sm'
+                  : 'bg-[#fffaf0] border-[#e5e5e5] hover:border-[#0a0a0a]'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Daily Revenue (Today)</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    periodFilter === 'daily' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {periodStats.daily.count} orders
+                </span>
+              </div>
+              <div className="text-2xl font-bold tracking-tight mt-1.5">
+                {formatINR(periodStats.daily.collectedRevenue)}
+              </div>
+              <div className={`text-[11px] mt-1.5 flex items-center justify-between ${periodFilter === 'daily' ? 'text-white/80' : 'text-[#6a6a6a]'}`}>
+                <span>Booked: {formatINR(periodStats.daily.grossRevenue)}</span>
+                <span className="font-semibold">{periodStats.daily.collectedCount} collected</span>
+              </div>
+            </div>
+
+            {/* Weekly Revenue Card */}
+            <div
+              onClick={() => setPeriodFilter(periodFilter === 'weekly' ? 'all' : 'weekly')}
+              className={`p-4 rounded-[16px] border cursor-pointer transition-all ${
+                periodFilter === 'weekly'
+                  ? 'bg-[#0a0a0a] text-white border-[#0a0a0a] shadow-sm'
+                  : 'bg-[#fffaf0] border-[#e5e5e5] hover:border-[#0a0a0a]'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Weekly Revenue (7 Days)</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    periodFilter === 'weekly' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {periodStats.weekly.count} orders
+                </span>
+              </div>
+              <div className="text-2xl font-bold tracking-tight mt-1.5">
+                {formatINR(periodStats.weekly.collectedRevenue)}
+              </div>
+              <div className={`text-[11px] mt-1.5 flex items-center justify-between ${periodFilter === 'weekly' ? 'text-white/80' : 'text-[#6a6a6a]'}`}>
+                <span>Booked: {formatINR(periodStats.weekly.grossRevenue)}</span>
+                <span className="font-semibold">{periodStats.weekly.collectedCount} collected</span>
+              </div>
+            </div>
+
+            {/* Monthly Revenue Card */}
+            <div
+              onClick={() => setPeriodFilter(periodFilter === 'monthly' ? 'all' : 'monthly')}
+              className={`p-4 rounded-[16px] border cursor-pointer transition-all ${
+                periodFilter === 'monthly'
+                  ? 'bg-[#0a0a0a] text-white border-[#0a0a0a] shadow-sm'
+                  : 'bg-[#fffaf0] border-[#e5e5e5] hover:border-[#0a0a0a]'
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Monthly Revenue (30 Days)</span>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    periodFilter === 'monthly' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'
+                  }`}
+                >
+                  {periodStats.monthly.count} orders
+                </span>
+              </div>
+              <div className="text-2xl font-bold tracking-tight mt-1.5">
+                {formatINR(periodStats.monthly.collectedRevenue)}
+              </div>
+              <div className={`text-[11px] mt-1.5 flex items-center justify-between ${periodFilter === 'monthly' ? 'text-white/80' : 'text-[#6a6a6a]'}`}>
+                <span>Booked: {formatINR(periodStats.monthly.grossRevenue)}</span>
+                <span className="font-semibold">{periodStats.monthly.collectedCount} collected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Top 4 KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* Gross Revenue */}
@@ -224,7 +356,7 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
           <div className="p-4 bg-[#a4d4c5]/25 rounded-[16px] border border-[#a4d4c5]/50">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-[1px] text-[#1a3a3a]">
-                Collected at Counter
+                Collected at Store
               </span>
               <CheckCircle2 className="h-4 w-4 text-[#1a3a3a]" />
             </div>
@@ -303,7 +435,7 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
           </div>
 
           <div className="hidden sm:block text-[11px] text-[#6a6a6a]">
-            Stationery Store Counter POS
+            Stationery Store POS
           </div>
         </div>
 
@@ -476,7 +608,7 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
                   <h4 className="text-sm font-medium tracking-tight text-[#0a0a0a]">
                     Revenue by Stationery Category
                   </h4>
-                  <p className="text-[11px] text-[#6a6a6a]">Top product lines driving counter revenue</p>
+                  <p className="text-[11px] text-[#6a6a6a]">Top product lines driving store revenue</p>
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#ff4d8b]">
                   Categories
