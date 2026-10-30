@@ -42,14 +42,14 @@ export function detectRoleFromEmail(email) {
   return 'student';
 }
 
-export async function loginWithGoogle() {
+export async function loginWithGoogle(preferredRole = null) {
   if (USE_MOCK || !auth) {
     // Return a mock student for test environments without live firebase credentials
     const mockStudent = mockUsers[0];
     return {
       uid: mockStudent.id,
       email: mockStudent.email,
-      role: 'student',
+      role: preferredRole || 'student',
       displayName: mockStudent.name,
       photoURL: null,
     };
@@ -59,11 +59,11 @@ export async function loginWithGoogle() {
   provider.setCustomParameters({ prompt: 'select_account' });
   const credential = await signInWithPopup(auth, provider);
   const email = credential.user.email || '';
-  const role = detectRoleFromEmail(email) || 'student';
+  const role = preferredRole || detectRoleFromEmail(email) || 'student';
   const displayName = credential.user.displayName || email.split('@')[0];
 
   // Sync role to backend Firestore in background
-  api.post('/auth/sync-role', { uid: credential.user.uid, email }).catch(() => {});
+  api.post('/auth/sync-role', { uid: credential.user.uid, email, role }).catch(() => {});
 
   return {
     uid: credential.user.uid,
@@ -74,7 +74,7 @@ export async function loginWithGoogle() {
   };
 }
 
-export async function loginWithEmail(email, password) {
+export async function loginWithEmail(email, password, preferredRole = null) {
   if (USE_MOCK || !auth) {
     // Mock login: find user in mock data
     const mockUser = mockUsers.find(
@@ -83,7 +83,7 @@ export async function loginWithEmail(email, password) {
     if (!mockUser) {
       throw new Error('Invalid email or password.');
     }
-    return { uid: mockUser.id, email: mockUser.email, role: mockUser.role, displayName: mockUser.name };
+    return { uid: mockUser.id, email: mockUser.email, role: preferredRole || mockUser.role, displayName: mockUser.name };
   }
 
   let credential;
@@ -106,11 +106,11 @@ export async function loginWithEmail(email, password) {
     }
   }
 
-  const role = detectRoleFromEmail(email) || 'student';
+  const role = preferredRole || detectRoleFromEmail(email) || 'student';
   const displayName = email.split('@')[0];
 
   // Sync role to backend Firestore in background
-  api.post('/auth/sync-role', { uid: credential.user.uid, email }).catch(() => {});
+  api.post('/auth/sync-role', { uid: credential.user.uid, email, role }).catch(() => {});
 
   return {
     uid: credential.user.uid,

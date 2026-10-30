@@ -9,7 +9,7 @@ export let memoryUsers = [];
  */
 export async function syncUserRole(req, res, next) {
   try {
-    const { uid, email } = req.body;
+    const { uid, email, role } = req.body;
     const targetUid = uid || req.user?.uid;
     const targetEmail = email || req.user?.email;
 
@@ -17,7 +17,7 @@ export async function syncUserRole(req, res, next) {
       return res.status(400).json({ error: 'BadRequest', message: 'User UID and email are required.' });
     }
 
-    const detectedRole = getRoleFromEmail(targetEmail) || 'student';
+    const detectedRole = role || getRoleFromEmail(targetEmail) || 'student';
 
     if (isFirebaseConnected && auth) {
       // Set Firebase Auth custom claims

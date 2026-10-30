@@ -72,17 +72,17 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, preferredRole = null) => {
     setLoading(true);
     try {
-      const userData = await loginWithEmail(email, password);
+      const userData = await loginWithEmail(email, password, preferredRole);
 
       let profile = {};
       try {
         profile = await getProfile();
       } catch (_) {}
 
-      const role = profile?.role || userData.role || detectRoleFromEmail(email);
+      const role = preferredRole || profile?.role || userData.role || detectRoleFromEmail(email);
 
       const isSuresh = email === 'suresh@shopadmin.ac.in';
       const assignedShopName = isSuresh
@@ -109,11 +109,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async () => {
+  const loginWithGoogle = useCallback(async (preferredRole = null) => {
     setLoading(true);
     try {
-      const userData = await firebaseLoginWithGoogle();
-      const role = userData.role || detectRoleFromEmail(userData.email) || 'student';
+      const userData = await firebaseLoginWithGoogle(preferredRole);
+      const role = preferredRole || userData.role || detectRoleFromEmail(userData.email) || 'student';
       const sessionUser = { ...userData, role };
       setUser(sessionUser);
       setRole(role);
