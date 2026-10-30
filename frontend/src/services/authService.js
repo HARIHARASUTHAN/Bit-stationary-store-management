@@ -16,11 +16,28 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 export function detectRoleFromEmail(email) {
   if (!email) return null;
   const cleanEmail = email.toLowerCase().trim();
-  if (cleanEmail.endsWith('@bitsathy.ac.in')) return 'student';
-  if (cleanEmail.endsWith('@student.ac.in')) return 'student';
-  if (cleanEmail.endsWith('@faculty.ac.in')) return 'faculty';
+
   if (cleanEmail.endsWith('@shopadmin.ac.in')) return 'shopadmin';
   if (cleanEmail.endsWith('@admin.ac.in')) return 'admin';
+  if (cleanEmail.endsWith('@student.ac.in')) return 'student';
+
+  if (cleanEmail.endsWith('@bitsathy.ac.in')) {
+    const localPart = cleanEmail.split('@')[0];
+
+    // Explicit known demo student or student roll prefix
+    if (localPart === 'arjun' || localPart.startsWith('student') || localPart.startsWith('roll')) {
+      return 'student';
+    }
+
+    // BIT student roll numbers start with digits (e.g. 7376222AD101 or 21CS101)
+    if (/^\d/.test(localPart)) {
+      return 'student';
+    }
+
+    // Faculty members at BIT Sathy log in through their institutional @bitsathy.ac.in mail (e.g. kavitha@bitsathy.ac.in)
+    return 'faculty';
+  }
+
   // Default general domain accounts (e.g. gmail.com) to student
   return 'student';
 }

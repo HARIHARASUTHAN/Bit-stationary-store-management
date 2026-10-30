@@ -22,9 +22,15 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
 
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail.endsWith('@faculty.ac.in')) {
+      setError('Faculty must log in through @bitsathy.ac.in institutional email address.');
+      return;
+    }
+
     if (!validateEmailDomain(email)) {
       setError(
-        'Campus email domain required: @bitsathy.ac.in, @student.ac.in, @faculty.ac.in, @shopadmin.ac.in, or @admin.ac.in'
+        'Campus email domain required: @bitsathy.ac.in (students & faculty), @shopadmin.ac.in, or @admin.ac.in'
       );
       return;
     }
@@ -272,11 +278,11 @@ export default function LoginPage() {
 
                 <button
                   type="button"
-                  onClick={() => handleQuickDemo('kavitha@faculty.ac.in', 'faculty123')}
+                  onClick={() => handleQuickDemo('kavitha@bitsathy.ac.in', 'faculty123')}
                   className="p-3 text-left bg-[#b8a4ed]/25 hover:bg-[#b8a4ed]/40 border border-[#b8a4ed]/50 rounded-[16px] transition-all"
                 >
                   <p className="text-xs font-semibold text-[#0a0a0a]">Faculty</p>
-                  <p className="text-[10px] text-[#6a6a6a] truncate">kavitha@faculty.ac.in</p>
+                  <p className="text-[10px] text-[#6a6a6a] truncate">kavitha@bitsathy.ac.in</p>
                 </button>
 
                 <button

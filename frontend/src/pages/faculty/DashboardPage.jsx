@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import FacultyLayout from '@/components/layout/FacultyLayout';
-import StatCard from '@/components/ui/StatCard';
 import Button from '@/components/ui/Button';
 import ItemCard from '@/components/catalog/ItemCard';
 import { useAuth } from '@/context/AuthContext';
@@ -14,8 +13,6 @@ import {
   ShoppingBag,
   Clock,
   Building2,
-  Sparkles,
-  CheckCircle2,
   ArrowRight,
   Store,
   MapPin,
@@ -104,7 +101,26 @@ export default function FacultyDashboardPage() {
     });
   }, [items, selectedShopId, customShopName]);
 
-  const featuredItems = shopItems.slice(0, 4);
+  // Featured Teaching & Examination items (exclude Interview File, prioritize Whiteboard Marker)
+  const featuredItems = useMemo(() => {
+    const nonInterview = shopItems.filter(
+      (item) => !(item.name && item.name.toLowerCase().includes('interview file'))
+    );
+
+    const whiteboardMarker = shopItems.find(
+      (item) =>
+        item.name &&
+        (item.name.toLowerCase().includes('white board marker') ||
+          item.name.toLowerCase().includes('whiteboard marker'))
+    );
+
+    if (whiteboardMarker) {
+      const rest = nonInterview.filter((item) => item.id !== whiteboardMarker.id);
+      return [whiteboardMarker, ...rest].slice(0, 4);
+    }
+
+    return nonInterview.slice(0, 4);
+  }, [shopItems]);
 
   return (
     <FacultyLayout>
@@ -154,7 +170,7 @@ export default function FacultyDashboardPage() {
             <div className="bg-[#1a3a3a] text-white p-8 rounded-[24px] space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#ffb084]">
-                  {selectedShop ? 'Assigned Branch Desk' : 'Priority Desk #2 Open'}
+                  {selectedShop ? 'Assigned Branch Desk' : 'Academic Express Dispatch'}
                 </span>
                 <span className="h-2.5 w-2.5 rounded-full bg-[#ffb084]"></span>
               </div>
@@ -171,14 +187,6 @@ export default function FacultyDashboardPage() {
                 <div className="flex justify-between text-white/80">
                   <span>Assigned Department</span>
                   <span className="font-semibold text-white">{user?.department || 'Computer Science'}</span>
-                </div>
-                <div className="flex justify-between text-white/80">
-                  <span>Department Indent Support</span>
-                  <span className="font-semibold text-[#a4d4c5]">Active & Enabled</span>
-                </div>
-                <div className="flex justify-between text-white/80">
-                  <span>Catalog In Stock</span>
-                  <span className="font-semibold text-white">{shopItems.length} SKUs</span>
                 </div>
               </div>
 
@@ -204,31 +212,6 @@ export default function FacultyDashboardPage() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* 3 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <StatCard
-            title="Orders"
-            value={myOrders.length}
-            subtitle="Total pre-orders placed"
-            icon={Building2}
-            color="peach"
-          />
-          <StatCard
-            title="Lab Consumables"
-            value={bulkOrders.length}
-            subtitle="Department allocations"
-            icon={Sparkles}
-            color="lavender"
-          />
-          <StatCard
-            title="Pickup Desk"
-            value="Priority Desk #2"
-            subtitle="Express academic pickup"
-            icon={CheckCircle2}
-            color="teal"
-          />
         </div>
 
         {/* CAMPUS SHOPS SECTION (Select Shop Name to View Items) */}

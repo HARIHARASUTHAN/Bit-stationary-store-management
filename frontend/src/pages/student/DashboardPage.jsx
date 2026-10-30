@@ -257,17 +257,13 @@ export default function StudentDashboardPage() {
                     {selectedShop ? selectedShop.operatingHours : '8:30 AM – 6:00 PM'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-[#6a6a6a]">
-                  <span>{selectedShop ? 'Items in this Shop' : 'Available Products'}</span>
-                  <span className="font-semibold text-[#0a0a0a]">{shopItems.length} products</span>
-                </div>
                 <div className="pt-1 flex items-center gap-1.5 text-[#1a3a3a] font-semibold text-[11px]">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>Queue-bypass guaranteed for online slots</span>
                 </div>
               </div>
 
-              {selectedShop ? (
+              {selectedShop && (
                 <button
                   type="button"
                   onClick={() => handleSelectShop(selectedShop)}
@@ -276,16 +272,6 @@ export default function StudentDashboardPage() {
                   <span>Browse {selectedShop.name} Catalog</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </button>
-              ) : (
-                <Link to="/student/catalog" className="block w-full">
-                  <button
-                    type="button"
-                    className="w-full py-2.5 px-4 rounded-[16px] bg-[#0a0a0a] text-white hover:bg-[#252525] text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm group"
-                  >
-                    <span>Browse All Campus Stationery</span>
-                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                  </button>
-                </Link>
               )}
             </div>
           </div>

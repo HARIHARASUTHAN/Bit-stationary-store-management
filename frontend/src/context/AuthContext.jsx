@@ -35,12 +35,12 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const tokenResult = await firebaseUser.getIdTokenResult().catch(() => ({ claims: {} }));
-        const role = tokenResult.claims?.role || detectRoleFromEmail(firebaseUser.email) || 'student';
-        
         let profile = {};
         try {
           profile = await getProfile();
         } catch (_) {}
+
+        const role = profile?.role || tokenResult.claims?.role || detectRoleFromEmail(firebaseUser.email) || 'student';
 
         const isSuresh = firebaseUser.email === 'suresh@shopadmin.ac.in';
         const assignedShopName = isSuresh
@@ -76,12 +76,13 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const userData = await loginWithEmail(email, password);
-      const role = userData.role || detectRoleFromEmail(email);
 
       let profile = {};
       try {
         profile = await getProfile();
       } catch (_) {}
+
+      const role = profile?.role || userData.role || detectRoleFromEmail(email);
 
       const isSuresh = email === 'suresh@shopadmin.ac.in';
       const assignedShopName = isSuresh

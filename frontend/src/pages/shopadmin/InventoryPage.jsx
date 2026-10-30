@@ -9,7 +9,7 @@ import SearchBar from '@/components/ui/SearchBar';
 import Select from '@/components/ui/Select';
 import { useToast } from '@/components/ui/ToastProvider';
 import { mockItems, categories_list } from '@/mocks/items';
-import { getActiveCampusShops, getShopForUser } from '@/mocks/shops';
+import { getActiveCampusShops, getShopForUser, isItemAvailableAtShop } from '@/mocks/shops';
 import { useAuth } from '@/context/AuthContext';
 import { getItems, addItem, updateItem, deleteItem } from '@/services/inventoryService';
 import { Plus, Download, Filter, X } from 'lucide-react';
@@ -52,18 +52,20 @@ export default function ShopAdminInventoryPage() {
     fetchItems();
   }, []);
 
-  // Map each item to reflect this specific shop's stock
+  // Strictly isolate items belonging to this shop, and map to reflect this specific shop's stock
   const shopScopedItems = useMemo(() => {
-    return items.map((item) => {
-      const shopStock = (item.shopStocks && typeof item.shopStocks[adminShopId] === 'number')
-        ? item.shopStocks[adminShopId]
-        : (typeof item.stock === 'number' ? item.stock : 0);
-      return {
-        ...item,
-        stock: shopStock,
-      };
-    });
-  }, [items, adminShopId]);
+    return items
+      .filter((item) => isItemAvailableAtShop(item, adminShopId, adminShop?.name))
+      .map((item) => {
+        const shopStock = (item.shopStocks && typeof item.shopStocks[adminShopId] === 'number')
+          ? item.shopStocks[adminShopId]
+          : (typeof item.stock === 'number' ? item.stock : 0);
+        return {
+          ...item,
+          stock: shopStock,
+        };
+      });
+  }, [items, adminShopId, adminShop?.name]);
 
   // Synchronize URL parameters (e.g. from Low-Stock Warnings redirect)
   useEffect(() => {
@@ -122,23 +124,27 @@ export default function ShopAdminInventoryPage() {
         };
         const payload = {
           ...itemData,
+          shopId: origItem.shopId || adminShopId,
+          shopName: origItem.shopName || adminShop?.name || 'RASE MECH',
           shopStocks: updatedShopStocks,
         };
         const updated = await updateItem(editingItem.id, payload);
         setItems((prev) =>
           prev.map((i) => (i.id === editingItem.id ? { ...i, ...updated, shopStocks: updatedShopStocks } : i))
         );
-        toast.success('Item Updated', `${itemData.name} stock saved for ${adminShop.name}.`);
+        toast.success('Item Updated', `${itemData.name} stock saved for ${adminShop?.name || 'store'}.`);
       } else {
         const payload = {
           ...itemData,
+          shopId: adminShopId,
+          shopName: adminShop?.name || 'RASE MECH',
           shopStocks: {
             [adminShopId]: newStockVal,
           },
         };
         const newItem = await addItem(payload);
         setItems((prev) => [newItem, ...prev]);
-        toast.success('Item Added', `${itemData.name} added to catalog.`);
+        toast.success('Item Added', `${itemData.name} added to ${adminShop?.name || 'store'}.`);
       }
     } catch (err) {
       toast.error('Save Failed', err.message || 'Could not save item.');

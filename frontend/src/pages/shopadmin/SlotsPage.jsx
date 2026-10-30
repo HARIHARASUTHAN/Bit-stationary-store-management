@@ -4,7 +4,7 @@ import SlotConfig from '@/components/admin/SlotConfig';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { mockSlots } from '@/mocks/slots';
-import { getSlots, addSlot, deleteSlot } from '@/services/slotService';
+import { getSlots, addSlot, updateSlot, deleteSlot } from '@/services/slotService';
 import { useToast } from '@/components/ui/ToastProvider';
 
 export default function ShopAdminSlotsPage() {
@@ -42,6 +42,22 @@ export default function ShopAdminSlotsPage() {
       // Optimistic fallback for local dev
       setSlots((prev) => [...prev, newSlot]);
       toast.success('Pickup Slot Added', `${newSlot.date} (${newSlot.time}) enabled.`);
+    }
+  };
+
+  const handleUpdateSlot = async (updatedSlot) => {
+    try {
+      const res = await updateSlot(updatedSlot.id, updatedSlot);
+      setSlots((prev) =>
+        prev.map((s) => (s.id === updatedSlot.id ? { ...s, ...res, ...updatedSlot } : s))
+      );
+      toast.success('Pickup Slot Updated', `${updatedSlot.date} (${updatedSlot.time}) updated.`);
+    } catch (err) {
+      console.error('Failed to update slot:', err);
+      setSlots((prev) =>
+        prev.map((s) => (s.id === updatedSlot.id ? { ...s, ...updatedSlot } : s))
+      );
+      toast.success('Pickup Slot Updated', `${updatedSlot.date} (${updatedSlot.time}) updated.`);
     }
   };
 
@@ -83,6 +99,7 @@ export default function ShopAdminSlotsPage() {
           <SlotConfig
             slots={slots}
             onAddSlot={handleAddSlot}
+            onUpdateSlot={handleUpdateSlot}
             onDeleteSlot={(slot) => setSlotToDelete(slot)}
           />
         )}

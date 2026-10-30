@@ -2,25 +2,63 @@ import React, { useState } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
-import { Calendar, Plus, Clock, Trash2 } from 'lucide-react';
+import { Calendar, Plus, Clock, Trash2, Pencil } from 'lucide-react';
 
-export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
+export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDeleteSlot }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState(null);
   const [formData, setFormData] = useState({
-    date: '2026-09-11',
+    date: new Date().toISOString().split('T')[0],
     time: '10:00 AM – 11:00 AM',
     capacity: 20,
   });
 
+  const handleOpenAdd = () => {
+    setEditingSlot(null);
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      time: '10:00 AM – 11:00 AM',
+      capacity: 20,
+    });
+    setModalOpen(true);
+  };
+
+  const handleOpenEdit = (slot) => {
+    setEditingSlot(slot);
+    setFormData({
+      date: slot.date || '',
+      time: slot.time || '',
+      capacity: slot.capacity !== undefined ? slot.capacity : 20,
+    });
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setEditingSlot(null);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    onAddSlot({
-      ...formData,
-      capacity: Number(formData.capacity),
-      booked: 0,
-      id: `s-${Date.now()}`,
-    });
-    setModalOpen(false);
+    if (editingSlot) {
+      if (onUpdateSlot) {
+        onUpdateSlot({
+          ...editingSlot,
+          ...formData,
+          capacity: Number(formData.capacity),
+        });
+      }
+    } else {
+      if (onAddSlot) {
+        onAddSlot({
+          ...formData,
+          capacity: Number(formData.capacity),
+          booked: 0,
+          id: `s-${Date.now()}`,
+        });
+      }
+    }
+    handleCloseModal();
   };
 
   return (
@@ -30,7 +68,7 @@ export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
           <h3 className="text-base font-semibold text-gray-900">Pickup Time Slots</h3>
           <p className="text-xs text-gray-500">Configure pickup windows and per-slot capacity limits</p>
         </div>
-        <Button variant="primary" size="sm" icon={Plus} onClick={() => setModalOpen(true)}>
+        <Button variant="primary" size="sm" icon={Plus} onClick={handleOpenAdd}>
           Add Slot Window
         </Button>
       </div>
@@ -57,7 +95,7 @@ export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
                     <Calendar className="h-4 w-4 text-teal-600" />
                     <span>{slot.date}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                         isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
@@ -65,11 +103,20 @@ export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
                     >
                       {isFull ? 'FULL' : `${slot.capacity - slot.booked} left`}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(slot)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      title="Edit slot window"
+                      aria-label={`Edit slot ${slot.time} on ${slot.date}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
                     {onDeleteSlot && (
                       <button
                         type="button"
                         onClick={() => onDeleteSlot(slot)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                         title="Delete slot"
                         aria-label={`Delete slot ${slot.time} on ${slot.date}`}
                       >
@@ -79,36 +126,40 @@ export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
                   </div>
                 </div>
 
-              <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span>{slot.time}</span>
-              </div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span>{slot.time}</span>
+                </div>
 
-              <div>
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>Capacity: {slot.booked} / {slot.capacity}</span>
-                  <span>{pct}%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all ${
-                      pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-teal-500'
-                    }`}
-                    style={{ width: `${Math.min(100, pct)}%` }}
-                  />
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Capacity: {slot.booked} / {slot.capacity}</span>
+                    <span>{pct}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-teal-500'
+                      }`}
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       )}
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Create Pickup Slot"
-        subtitle="Specify date, time window, and maximum order bookings"
+        onClose={handleCloseModal}
+        title={editingSlot ? 'Edit Pickup Slot Window' : 'Create Pickup Slot'}
+        subtitle={
+          editingSlot
+            ? 'Modify date, time window, or maximum order capacity'
+            : 'Specify date, time window, and maximum order bookings'
+        }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -128,16 +179,22 @@ export default function SlotConfig({ slots = [], onAddSlot, onDeleteSlot }) {
           <Input
             label="Capacity (Max orders)"
             type="number"
+            min="1"
             value={formData.capacity}
             onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
             required
+            helperText={
+              editingSlot && editingSlot.booked > 0
+                ? `Currently ${editingSlot.booked} order(s) already booked for this window.`
+                : undefined
+            }
           />
           <div className="flex justify-end gap-3 pt-3">
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button variant="secondary" onClick={handleCloseModal}>
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Save Slot
+              {editingSlot ? 'Update Slot' : 'Save Slot'}
             </Button>
           </div>
         </form>

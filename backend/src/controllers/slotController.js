@@ -58,6 +58,10 @@ export async function updateSlot(req, res, next) {
   try {
     const { id } = req.params;
     const updates = { ...req.body };
+    delete updates.id;
+    if (updates.capacity !== undefined) {
+      updates.capacity = Number(updates.capacity);
+    }
 
     if (isFirebaseConnected && db) {
       const ref = db.collection('slots').doc(id);

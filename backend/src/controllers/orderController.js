@@ -328,7 +328,7 @@ export async function placeOrder(req, res, next) {
     const orderData = {
       userId: req.user?.uid || req.body.userId || 'guest-user',
       userName: req.user?.displayName || req.body.userName || 'Campus User',
-      userEmail: req.user?.email || req.body.userEmail || 'faculty@faculty.ac.in',
+      userEmail: req.user?.email || req.body.userEmail || 'faculty@bitsathy.ac.in',
       userDepartment: userDepartment || req.body.userDepartment || 'General',
       role: req.user?.role || (isBulkOrder ? 'faculty' : (req.body.role || 'faculty')),
       status: 'Pending',

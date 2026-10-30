@@ -191,7 +191,6 @@ export default function StudentCatalogPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
               {availableShops.map((shop) => {
                 const isSelected = selectedShopId === shop.id;
-                const count = items.filter((it) => isItemAvailableAtShop(it, shop.id)).length;
                 return (
                   <button
                     key={shop.id}
@@ -204,10 +203,7 @@ export default function StudentCatalogPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold truncate pr-1">{shop.name}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-[#faf5e8] text-[#6a6a6a]'}`}>
-                        {count}
-                      </span>
+                      <span className="font-semibold truncate">{shop.name}</span>
                     </div>
                     <p className={`text-[11px] mt-1 truncate ${isSelected ? 'text-white/70' : 'text-[#6a6a6a]'}`}>
                       {shop.counter || shop.tagline}

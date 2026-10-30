@@ -155,7 +155,7 @@ export default function FacultyCheckoutPage() {
       const orderPayload = {
         userId: user?.uid || 'faculty-user',
         userName: user?.displayName || user?.name || (user?.email ? user.email.split('@')[0] : 'Faculty Member'),
-        userEmail: user?.email || 'faculty@faculty.ac.in',
+        userEmail: user?.email || 'kavitha@bitsathy.ac.in',
         userDepartment: user?.department || 'Academic Department Indent',
         role: 'faculty',
         shopId: activeShop.id,

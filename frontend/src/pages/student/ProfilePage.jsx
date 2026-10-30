@@ -43,7 +43,7 @@ const YEAR_OPTIONS = [
 export default function StudentProfilePage() {
   const { user, updateUserProfile, role } = useAuth();
   const toast = useToast();
-  const isFaculty = role === 'faculty' || (user?.email && user.email.includes('@faculty.ac.in'));
+  const isFaculty = role === 'faculty';
 
   // Profile details states
   const [name, setName] = useState('');
@@ -225,7 +225,7 @@ export default function StudentProfilePage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder={isFaculty ? 'name@faculty.ac.in' : 'name@bitsathy.ac.in'}
+              placeholder={isFaculty ? 'faculty@bitsathy.ac.in' : 'name@bitsathy.ac.in'}
               icon={Mail}
               required
               helperText="Your official campus email used for order confirmations and pickup alerts"

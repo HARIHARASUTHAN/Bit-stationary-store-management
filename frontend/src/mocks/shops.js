@@ -93,21 +93,32 @@ export function isItemAvailableAtShop(item, shopId, customShopName) {
 
   // 1. If item has explicit shop assignment (by id or name)
   if (itemShopId || itemShopName) {
-    const idMatch =
-      itemShopId &&
-      (itemShopId === targetId ||
-        itemShopId.includes(targetId) ||
-        targetId.includes(itemShopId));
-    const nameMatch =
-      itemShopName &&
-      (itemShopName === targetName ||
-        itemShopName.includes(targetName) ||
-        targetName.includes(itemShopName));
+    const norm = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normTargetId = norm(targetId);
+    const normItemId = norm(itemShopId);
+    const normTargetName = norm(targetName);
+    const normItemName = norm(itemShopName);
+
+    const idMatch = Boolean(normItemId && normTargetId && (normItemId === normTargetId));
+    const nameMatch = Boolean(
+      normItemName &&
+        normTargetName &&
+        (normItemName === normTargetName ||
+          (normItemName.includes('rasemech') && normTargetName.includes('rasemech')) ||
+          (normItemName.includes('sisbit') && normTargetName.includes('sisbit')))
+    );
 
     if (idMatch || nameMatch) {
       return true;
     }
     return false;
+  }
+
+  // 2. If item has explicit shops list array
+  if (Array.isArray(item.shops) && item.shops.length > 0) {
+    const norm = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normTargetId = norm(targetId);
+    return item.shops.some((s) => norm(s) === normTargetId);
   }
 
   // All admin-created campus shops stock standard unassigned stationery inventory

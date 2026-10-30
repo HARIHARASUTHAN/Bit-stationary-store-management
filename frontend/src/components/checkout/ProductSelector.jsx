@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { mockItems, categories_list } from '@/mocks/items';
+import { isItemAvailableAtShop } from '@/mocks/shops';
 import { getItems } from '@/services/inventoryService';
 import { formatINR } from '@/utils/currency';
 import StockBadge from '@/components/catalog/StockBadge';
@@ -41,15 +42,18 @@ export default function ProductSelector({ onSelectProduct, activeShop = null }) 
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      const matchesShop = activeShop?.id
+        ? isItemAvailableAtShop(item, activeShop.id, activeShop.name)
+        : true;
       const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
       const matchesSearch = searchTerm
         ? item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.category?.toLowerCase().includes(searchTerm.toLowerCase())
         : true;
-      return matchesCategory && matchesSearch;
+      return matchesShop && matchesCategory && matchesSearch;
     });
-  }, [items, selectedCategory, searchTerm]);
+  }, [items, activeShop, selectedCategory, searchTerm]);
 
   // Selected item object from dropdown/picker
   const currentItem = useMemo(() => {
