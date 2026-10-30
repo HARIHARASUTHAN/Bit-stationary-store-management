@@ -136,8 +136,12 @@ export async function mockUpdateOrderStatus(id, status) {
         ...o,
         status,
         timeline: [
-          ...o.timeline,
-          { status, timestamp: new Date().toISOString(), note: `Status updated to ${status}` },
+          ...(o.timeline || []),
+          {
+            status,
+            timestamp: new Date().toISOString(),
+            note: status === 'Cancelled' ? 'Order cancelled prior to store approval' : `Status updated to ${status}`,
+          },
         ],
       }
       : o

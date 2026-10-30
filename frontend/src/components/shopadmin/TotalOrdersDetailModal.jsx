@@ -67,7 +67,9 @@ export default function TotalOrdersDetailModal({
     });
   }, [periodOrders, statusFilter, roleFilter, search]);
 
-  const filteredTotalValue = filteredOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const filteredTotalValue = filteredOrders
+    .filter((o) => (o.status || '').toLowerCase().trim() !== 'cancelled')
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
   // Export CSV Handler
   const handleExportCSV = () => {

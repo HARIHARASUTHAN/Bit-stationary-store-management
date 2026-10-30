@@ -5,20 +5,25 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import OrderTimeline from '@/components/orders/OrderTimeline';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import { mockOrders } from '@/mocks/orders';
-import { getOrderById } from '@/services/orderService';
+import { getOrderById, cancelOrder } from '@/services/orderService';
 import { formatINR } from '@/utils/currency';
 import { formatDateTime } from '@/utils/formatDate';
-import { ArrowLeft, Calendar, User, Printer, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Printer, ShieldCheck, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function StudentOrderDetailPage() {
   const { orderId } = useParams();
   const { role } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +46,37 @@ export default function StudentOrderDetailPage() {
 
     return () => { isMounted = false; };
   }, [orderId]);
+
+  const handleCancelOrder = async () => {
+    if (!order) return;
+    setCancelling(true);
+    try {
+      const updated = await cancelOrder(order.id);
+      const now = new Date().toISOString();
+      setOrder((prev) => ({
+        ...prev,
+        ...(updated || {}),
+        status: 'Cancelled',
+        timeline: [
+          ...(prev.timeline || []),
+          {
+            status: 'Cancelled',
+            timestamp: now,
+            note: 'Order cancelled prior to store approval',
+          },
+        ],
+      }));
+      toast.success('Pre-order Cancelled', `Pre-order #${order.id} has been cancelled successfully.`);
+      setShowCancelDialog(false);
+    } catch (err) {
+      toast.error(
+        'Cancellation Failed',
+        err.response?.data?.message || err.message || 'Could not cancel order.'
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -73,7 +109,7 @@ export default function StudentOrderDetailPage() {
   return (
     <StudentLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center text-xs font-semibold text-[#6a6a6a] hover:text-[#0a0a0a] transition-colors"
@@ -81,15 +117,53 @@ export default function StudentOrderDetailPage() {
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             Back to Orders
           </button>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Printer}
-            onClick={() => window.print()}
-          >
-            Print Pickup Voucher
-          </Button>
+          <div className="flex items-center gap-2">
+            {order.status === 'Pending' && (
+              <Button
+                variant="danger"
+                size="sm"
+                icon={XCircle}
+                onClick={() => setShowCancelDialog(true)}
+              >
+                Cancel Pre-Order
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Printer}
+              onClick={() => window.print()}
+            >
+              Print Pickup Voucher
+            </Button>
+          </div>
         </div>
+
+        {/* Pending Approval Banner with Cancel Action */}
+        {order.status === 'Pending' && (
+          <div className="bg-[#fff8e6] border border-[#fcd34d] text-[#78350f] rounded-[24px] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="flex items-start gap-3">
+              <Clock className="h-5 w-5 text-[#d97706] flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-semibold text-[#92400e]">
+                  Awaiting Campus Store Approval
+                </h4>
+                <p className="text-xs text-[#b45309] mt-0.5 leading-relaxed">
+                  The campus store operator has not approved this order yet. You can cancel your order and release your reserved items anytime before approval.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="danger"
+              size="sm"
+              icon={XCircle}
+              onClick={() => setShowCancelDialog(true)}
+              className="shrink-0"
+            >
+              Cancel Pre-Order
+            </Button>
+          </div>
+        )}
 
         {/* Header summary */}
         <div className="bg-[#fffaf0] rounded-[24px] border border-[#e5e5e5] p-6 sm:p-8 space-y-6">
@@ -233,6 +307,18 @@ export default function StudentOrderDetailPage() {
             </table>
           </div>
         </div>
+
+        <ConfirmDialog
+          isOpen={showCancelDialog}
+          onClose={() => !cancelling && setShowCancelDialog(false)}
+          onConfirm={handleCancelOrder}
+          title="Cancel Pre-Order"
+          message={`Are you sure you want to cancel pre-order #${order.id}? Your reserved stationery items and scheduled pickup slot will be immediately released back to the store.`}
+          confirmText="Yes, Cancel Order"
+          cancelText="Keep Order"
+          variant="danger"
+          loading={cancelling}
+        />
       </div>
     </StudentLayout>
   );

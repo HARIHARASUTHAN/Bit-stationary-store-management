@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import OrderStatusBadge from './OrderStatusBadge';
 import { formatINR } from '@/utils/currency';
 import { formatDateTime } from '@/utils/formatDate';
-import { Calendar, ChevronRight, Package, ShieldCheck, Store, MapPin } from 'lucide-react';
+import { Calendar, ChevronRight, Package, ShieldCheck, Store, MapPin, XCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export default function OrderCard({ order }) {
+export default function OrderCard({ order, onCancel }) {
   const { role } = useAuth();
   const itemCount = order.items?.reduce((sum, i) => sum + i.quantity, 0) || 0;
 
@@ -71,18 +71,30 @@ export default function OrderCard({ order }) {
         </div>
       )}
 
-      <div className="pt-4 border-t border-[#e5e5e5] flex items-center justify-between">
+      <div className="pt-4 border-t border-[#e5e5e5] flex flex-wrap items-center justify-between gap-3">
         <div>
           <span className="text-[10px] text-[#9a9a9a] uppercase tracking-wider block">Total Due</span>
           <span className="text-lg font-medium tracking-tight text-[#0a0a0a]">{formatINR(order.total)}</span>
         </div>
-        <Link
-          to={`/${role || 'student'}/orders/${order.id}`}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#0a0a0a] hover:text-[#ff4d8b] transition-colors"
-        >
-          View Order Slip
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
+        <div className="flex items-center gap-3">
+          {order.status === 'Pending' && onCancel && (
+            <button
+              type="button"
+              onClick={() => onCancel(order)}
+              className="px-3 py-1.5 rounded-[12px] text-xs font-medium text-[#ef4444] bg-[#fee2e2]/40 hover:bg-[#fee2e2] border border-[#fca5a5]/60 hover:border-[#fca5a5] transition-all flex items-center gap-1.5"
+            >
+              <XCircle className="h-3.5 w-3.5" />
+              Cancel Order
+            </button>
+          )}
+          <Link
+            to={`/${role || 'student'}/orders/${order.id}`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-[#0a0a0a] hover:text-[#ff4d8b] transition-colors"
+          >
+            View Order Slip
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </div>
     </div>
   );

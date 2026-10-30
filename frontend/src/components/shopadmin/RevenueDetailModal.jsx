@@ -154,7 +154,9 @@ export default function RevenueDetailModal({ isOpen, onClose, orders = [] }) {
     });
   }, [activePeriodOrders, statusFilter, roleFilter, search]);
 
-  const filteredTotal = filteredOrders.reduce((sum, o) => sum + o.total, 0);
+  const filteredTotal = filteredOrders
+    .filter((o) => (o.status || '').toLowerCase().trim() !== 'cancelled')
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
   // Export CSV handler
   const handleExportCSV = () => {

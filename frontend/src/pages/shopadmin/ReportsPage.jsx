@@ -111,15 +111,17 @@ export default function ShopAdminReportsPage() {
   // Department Aggregates for this shop
   const departmentAggregates = useMemo(() => {
     const map = {};
-    filteredOrders.forEach((o) => {
-      const dept = o.userDepartment || 'General Requisition';
-      if (!map[dept]) {
-        map[dept] = { department: dept, count: 0, revenue: 0, bulkCount: 0 };
-      }
-      map[dept].count += 1;
-      map[dept].revenue += Number(o.total) || 0;
-      if (o.isBulkOrder) map[dept].bulkCount += 1;
-    });
+    filteredOrders
+      .filter((o) => (o.status || '').toLowerCase().trim() !== 'cancelled')
+      .forEach((o) => {
+        const dept = o.userDepartment || 'General Requisition';
+        if (!map[dept]) {
+          map[dept] = { department: dept, count: 0, revenue: 0, bulkCount: 0 };
+        }
+        map[dept].count += 1;
+        map[dept].revenue += Number(o.total) || 0;
+        if (o.isBulkOrder) map[dept].bulkCount += 1;
+      });
     return Object.values(map);
   }, [filteredOrders]);
 
@@ -187,9 +189,11 @@ export default function ShopAdminReportsPage() {
   };
 
   // Metrics summary
-  const totalFilteredRevenue = filteredOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const totalFilteredRevenue = filteredOrders
+    .filter((o) => (o.status || '').toLowerCase().trim() !== 'cancelled')
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const collectedRevenue = filteredOrders
-    .filter((o) => (o.status || '').toLowerCase() === 'collected')
+    .filter((o) => (o.status || '').toLowerCase().trim() === 'collected')
     .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const totalInventoryValuation = scopedItems.reduce((sum, i) => sum + i.valuation, 0);
   const lowStockCount = scopedItems.filter((i) => i.stock <= i.lowStockThreshold).length;

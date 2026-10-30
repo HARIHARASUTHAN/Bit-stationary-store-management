@@ -21,6 +21,12 @@ export async function placeOrder(orderData) {
   return res.data;
 }
 
+export async function cancelOrder(id, reason = '') {
+  if (USE_MOCK) return mockUpdateOrderStatus(id, 'Cancelled');
+  const res = await api.patch(`/orders/${id}/cancel`, { reason });
+  return res.data;
+}
+
 export async function updateOrderStatus(id, status) {
   if (USE_MOCK) return mockUpdateOrderStatus(id, status);
   const res = await api.patch(`/orders/${id}/status`, { status });

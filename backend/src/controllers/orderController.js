@@ -478,6 +478,242 @@ export async function placeOrder(req, res, next) {
 }
 
 /**
+ * Restores item stock and slot booking capacity when an order is cancelled.
+ */
+export async function releaseOrderInventoryAndSlot(orderData) {
+  if (!orderData) return;
+  const items = orderData.items || [];
+  const targetShopId = (orderData.shopId || 'main-store').trim();
+
+  if (isFirebaseConnected && db) {
+    // 1. Restore item stock in Firestore
+    for (const item of items) {
+      const targetItemId = item.itemId || item.id;
+      const qtyToRestore = Number(item.quantity) || 1;
+      if (targetItemId) {
+        const itemRef = db.collection('inventory').doc(targetItemId);
+        try {
+          await db.runTransaction(async (t) => {
+            const snap = await t.get(itemRef);
+            if (snap.exists) {
+              const data = snap.data();
+              const globalStock = typeof data.stock === 'number' ? data.stock : 0;
+              const shopStocks = (data.shopStocks && typeof data.shopStocks === 'object') ? { ...data.shopStocks } : {};
+
+              const curShopStock = typeof shopStocks[targetShopId] === 'number'
+                ? shopStocks[targetShopId]
+                : globalStock;
+
+              shopStocks[targetShopId] = curShopStock + qtyToRestore;
+              const newGlobalStock = globalStock + qtyToRestore;
+
+              t.update(itemRef, {
+                stock: newGlobalStock,
+                shopStocks,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          });
+        } catch (err) {
+          console.warn(`Stock release warning for item ${targetItemId}:`, err.message);
+        }
+      }
+    }
+
+    // 2. Decrement slot capacity in Firestore
+    const pickupSlot = orderData.pickupSlot;
+    if (pickupSlot) {
+      try {
+        const targetSlotId = pickupSlot.slotId || pickupSlot.id;
+        let slotRef = null;
+
+        if (targetSlotId) {
+          const checkSlot = db.collection('slots').doc(targetSlotId);
+          const snap = await checkSlot.get();
+          if (snap.exists) {
+            slotRef = checkSlot;
+          }
+        }
+
+        if (!slotRef && pickupSlot.date && pickupSlot.time) {
+          const querySnap = await db.collection('slots')
+            .where('date', '==', pickupSlot.date)
+            .where('time', '==', pickupSlot.time)
+            .limit(1)
+            .get();
+          if (!querySnap.empty) {
+            slotRef = querySnap.docs[0].ref;
+          }
+        }
+
+        if (slotRef) {
+          await db.runTransaction(async (t) => {
+            const snap = await t.get(slotRef);
+            if (snap.exists) {
+              const sData = snap.data();
+              const globalBooked = typeof sData.booked === 'number' ? sData.booked : 0;
+              const shopBookings = (sData.shopBookings && typeof sData.shopBookings === 'object') ? { ...sData.shopBookings } : {};
+
+              const curShopBooked = typeof shopBookings[targetShopId] === 'number'
+                ? shopBookings[targetShopId]
+                : globalBooked;
+
+              shopBookings[targetShopId] = Math.max(0, curShopBooked - 1);
+              const newGlobalBooked = Math.max(0, globalBooked - 1);
+
+              t.update(slotRef, {
+                booked: newGlobalBooked,
+                shopBookings,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          });
+        }
+      } catch (slotErr) {
+        console.warn('Slot capacity release warning:', slotErr.message);
+      }
+    }
+  }
+
+  // In-memory fallback
+  for (const item of items) {
+    const targetItemId = item.itemId || item.id;
+    const qtyToRestore = Number(item.quantity) || 1;
+    const memItem = memoryInventory.find((i) => i.id === targetItemId);
+    if (memItem) {
+      memItem.stock = (memItem.stock || 0) + qtyToRestore;
+      if (!memItem.shopStocks) memItem.shopStocks = {};
+      const curShop = typeof memItem.shopStocks[targetShopId] === 'number' ? memItem.shopStocks[targetShopId] : memItem.stock;
+      memItem.shopStocks[targetShopId] = curShop + qtyToRestore;
+    }
+  }
+
+  if (orderData.pickupSlot) {
+    const pickupSlot = orderData.pickupSlot;
+    const targetSlotId = pickupSlot.slotId || pickupSlot.id;
+    const memSlot = memorySlots.find((s) =>
+      targetSlotId ? s.id === targetSlotId : (s.date === pickupSlot.date && s.time === pickupSlot.time)
+    );
+    if (memSlot) {
+      memSlot.booked = Math.max(0, (memSlot.booked || 0) - 1);
+      if (!memSlot.shopBookings) memSlot.shopBookings = {};
+      const curShop = typeof memSlot.shopBookings[targetShopId] === 'number' ? memSlot.shopBookings[targetShopId] : memSlot.booked;
+      memSlot.shopBookings[targetShopId] = Math.max(0, curShop - 1);
+    }
+  }
+}
+
+/**
+ * PATCH /api/orders/:id/cancel
+ * Allows student or faculty to cancel their order BEFORE the shop admin approves it (status must be 'Pending').
+ * Also allows shopadmin and admin.
+ */
+export async function cancelOrder(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    const currentUser = req.user;
+    const userRole = currentUser?.role || 'student';
+
+    let orderData = null;
+    let orderRef = null;
+
+    if (isFirebaseConnected && db) {
+      orderRef = db.collection('orders').doc(id);
+      const snap = await orderRef.get();
+      if (!snap.exists) {
+        return res.status(404).json({ error: 'NotFound', message: `Order #${id} not found.` });
+      }
+      orderData = { id: snap.id, ...snap.data() };
+    } else {
+      const found = memoryOrders.find((o) => o.id === id);
+      if (!found) {
+        return res.status(404).json({ error: 'NotFound', message: `Order #${id} not found.` });
+      }
+      orderData = found;
+    }
+
+    // Permission and role checks
+    if (userRole === 'student' || userRole === 'faculty') {
+      const isOwner =
+        (currentUser?.uid && String(orderData.userId) === String(currentUser.uid)) ||
+        (currentUser?.email && (orderData.userEmail || '').toLowerCase() === currentUser.email.toLowerCase());
+
+      if (!isOwner) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'You can only cancel your own pre-orders.',
+        });
+      }
+
+      // STRICT CHECK: can ONLY cancel before store approval (status must be 'Pending')
+      const currentStatus = (orderData.status || '').toLowerCase().trim();
+      if (currentStatus !== 'pending') {
+        return res.status(400).json({
+          error: 'BadRequest',
+          message: `This order cannot be cancelled because it has already been ${orderData.status.toLowerCase()} by the campus store. Cancellation is only allowed prior to store approval.`,
+        });
+      }
+    } else if (userRole === 'shopadmin') {
+      const { adminShopName, adminShopId } = await getAdminShopDetails(currentUser);
+      if (!doesOrderMatchShop(orderData, adminShopName, adminShopId)) {
+        return res.status(403).json({ error: 'Forbidden', message: 'You cannot cancel orders for another shop.' });
+      }
+    }
+
+    if ((orderData.status || '').toLowerCase().trim() === 'cancelled') {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: 'Order is already cancelled.',
+      });
+    }
+
+    const now = new Date().toISOString();
+    const actorLabel = currentUser?.displayName || (userRole === 'faculty' ? 'Faculty Member' : userRole === 'student' ? 'Student' : 'Campus Store Staff');
+    const cancelNote = reason
+      ? `Order cancelled by ${actorLabel}: ${reason}`
+      : `Order cancelled by ${actorLabel} prior to store approval`;
+
+    const event = {
+      status: 'Cancelled',
+      timestamp: now,
+      note: cancelNote,
+    };
+
+    // Release stock and slot capacity back
+    await releaseOrderInventoryAndSlot(orderData);
+
+    if (isFirebaseConnected && db && orderRef) {
+      const existingTimeline = orderData.timeline || [];
+      const updateFields = {
+        status: 'Cancelled',
+        timeline: [...existingTimeline, event],
+        updatedAt: now,
+        cancelledAt: now,
+        cancelledBy: currentUser?.email || currentUser?.uid || userRole,
+        cancelReason: reason || '',
+      };
+
+      await orderRef.update(updateFields);
+      const updated = await orderRef.get();
+      return res.json(sanitizeOrder({ id: updated.id, ...updated.data() }, currentUser));
+    }
+
+    // In-memory update
+    orderData.status = 'Cancelled';
+    orderData.timeline = [...(orderData.timeline || []), event];
+    orderData.updatedAt = now;
+    orderData.cancelledAt = now;
+    orderData.cancelledBy = currentUser?.email || currentUser?.uid || userRole;
+    orderData.cancelReason = reason || '';
+
+    return res.json(sanitizeOrder(orderData, currentUser));
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * PATCH /api/orders/:id/status
  */
 export async function updateOrderStatus(req, res, next) {
@@ -520,6 +756,10 @@ export async function updateOrderStatus(req, res, next) {
         updatedAt: now,
       };
 
+      if (status === 'Cancelled' && (existingData.status || '').toLowerCase().trim() !== 'cancelled') {
+        await releaseOrderInventoryAndSlot(existingData);
+      }
+
       // Generate cryptographically secure 6-digit code when transitioning to Ready
       if (isTransitionToReady) {
         updateFields.pickupCode = generateSecurePickupCode();
@@ -545,6 +785,10 @@ export async function updateOrderStatus(req, res, next) {
       if (!doesOrderMatchShop(order, adminShopName, adminShopId)) {
         return res.status(403).json({ error: 'Forbidden', message: 'You cannot update orders for another shop.' });
       }
+    }
+
+    if (status === 'Cancelled' && (order.status || '').toLowerCase().trim() !== 'cancelled') {
+      await releaseOrderInventoryAndSlot(order);
     }
 
     order.status = status;

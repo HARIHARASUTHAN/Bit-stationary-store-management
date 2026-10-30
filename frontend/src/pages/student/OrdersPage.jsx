@@ -3,16 +3,21 @@ import { Link } from 'react-router-dom';
 import StudentLayout from '@/components/layout/StudentLayout';
 import OrderCard from '@/components/orders/OrderCard';
 import EmptyState from '@/components/ui/EmptyState';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/ToastProvider';
 import { mockOrders } from '@/mocks/orders';
-import { getOrders } from '@/services/orderService';
+import { getOrders, cancelOrder } from '@/services/orderService';
 import { useAuth } from '@/context/AuthContext';
 import { Clock } from 'lucide-react';
 
 export default function StudentOrdersPage() {
   const { user, role } = useAuth();
+  const toast = useToast();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All');
+  const [cancelModalOrder, setCancelModalOrder] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -41,6 +46,38 @@ export default function StudentOrdersPage() {
   const filtered = orders.filter((order) =>
     filterStatus === 'All' ? true : order.status === filterStatus
   );
+
+  const handleCancelOrder = async () => {
+    if (!cancelModalOrder) return;
+    setCancelling(true);
+    try {
+      await cancelOrder(cancelModalOrder.id);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === cancelModalOrder.id
+            ? {
+                ...o,
+                status: 'Cancelled',
+                timeline: [
+                  ...(o.timeline || []),
+                  {
+                    status: 'Cancelled',
+                    timestamp: new Date().toISOString(),
+                    note: 'Order cancelled prior to store approval',
+                  },
+                ],
+              }
+            : o
+        )
+      );
+      toast.success('Pre-order Cancelled', `Order #${cancelModalOrder.id} has been cancelled successfully.`);
+      setCancelModalOrder(null);
+    } catch (err) {
+      toast.error('Cancellation Failed', err.response?.data?.message || err.message || 'Could not cancel order.');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
     <StudentLayout>
@@ -95,10 +132,26 @@ export default function StudentOrdersPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard
+                key={order.id}
+                order={order}
+                onCancel={(ord) => setCancelModalOrder(ord)}
+              />
             ))}
           </div>
         )}
+
+        <ConfirmDialog
+          isOpen={Boolean(cancelModalOrder)}
+          onClose={() => !cancelling && setCancelModalOrder(null)}
+          onConfirm={handleCancelOrder}
+          title="Cancel Pre-Order"
+          message={`Are you sure you want to cancel pre-order #${cancelModalOrder?.id}? Your reserved stationery supplies and pickup slot will be released back to the campus store.`}
+          confirmText="Yes, Cancel Order"
+          cancelText="Keep Order"
+          variant="danger"
+          loading={cancelling}
+        />
       </div>
     </StudentLayout>
   );

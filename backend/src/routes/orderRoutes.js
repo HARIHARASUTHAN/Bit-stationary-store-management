@@ -3,6 +3,7 @@ import {
   getOrders,
   getOrderById,
   placeOrder,
+  cancelOrder,
   updateOrderStatus,
   verifyPickupCode,
 } from '../controllers/orderController.js';
@@ -17,6 +18,9 @@ router.get('/:id', authenticate, getOrderById);
 
 // Place pre-order (students & faculty)
 router.post('/', authenticate, placeOrder);
+
+// Cancel pre-order (students & faculty before approval, or shopadmin & admin)
+router.patch('/:id/cancel', authenticate, cancelOrder);
 
 // Update order status progression (shopadmin & admin)
 router.patch('/:id/status', authenticate, requireRole(['shopadmin', 'admin']), updateOrderStatus);
