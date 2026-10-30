@@ -3,20 +3,23 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { Calendar, Plus, Clock, Trash2, Pencil } from 'lucide-react';
+import { isSlotExpired, formatLocalDate } from '@/utils/slotTimeUtils';
 
 export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDeleteSlot }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSlot, setEditingSlot] = useState(null);
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: formatLocalDate(new Date()),
     time: '10:00 AM – 11:00 AM',
     capacity: 20,
   });
 
   const handleOpenAdd = () => {
     setEditingSlot(null);
+    setFormError('');
     setFormData({
-      date: new Date().toISOString().split('T')[0],
+      date: formatLocalDate(new Date()),
       time: '10:00 AM – 11:00 AM',
       capacity: 20,
     });
@@ -25,6 +28,7 @@ export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDele
 
   const handleOpenEdit = (slot) => {
     setEditingSlot(slot);
+    setFormError('');
     setFormData({
       date: slot.date || '',
       time: slot.time || '',
@@ -36,10 +40,18 @@ export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDele
   const handleCloseModal = () => {
     setModalOpen(false);
     setEditingSlot(null);
+    setFormError('');
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
+
+    if (isSlotExpired(formData, new Date())) {
+      setFormError('Cannot configure a pickup slot in the past. Date and time must be in the future.');
+      return;
+    }
+
     if (editingSlot) {
       if (onUpdateSlot) {
         onUpdateSlot({
@@ -83,12 +95,15 @@ export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDele
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {slots.map((slot) => {
             const isFull = slot.booked >= slot.capacity;
+            const isExpired = isSlotExpired(slot, new Date());
             const pct = Math.round((slot.booked / slot.capacity) * 100);
 
             return (
               <div
                 key={slot.id}
-                className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm space-y-3 relative group"
+                className={`bg-white p-4 rounded-xl border shadow-sm space-y-3 relative group ${
+                  isExpired ? 'opacity-60 border-gray-200 bg-gray-50/50' : 'border-gray-200/80'
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-semibold text-[#1e3a5f]">
@@ -96,13 +111,19 @@ export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDele
                     <span>{slot.date}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {isFull ? 'FULL' : `${slot.capacity - slot.booked} left`}
-                    </span>
+                    {isExpired ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200/70 text-gray-600">
+                        Expired
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isFull ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        {isFull ? 'FULL' : `${slot.capacity - slot.booked} left`}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(slot)}
@@ -162,6 +183,11 @@ export default function SlotConfig({ slots = [], onAddSlot, onUpdateSlot, onDele
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {formError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-medium rounded-lg">
+              {formError}
+            </div>
+          )}
           <Input
             label="Pickup Date"
             type="date"

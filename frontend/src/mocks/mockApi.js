@@ -2,6 +2,7 @@ import mockItems from './items';
 import mockOrders from './orders';
 import mockSlots from './slots';
 import mockAuditLog from './auditLog';
+import { generateUpcomingSlots, filterFutureSlots } from '@/utils/slotTimeUtils';
 
 // Simulate network delay
 const delay = (ms = 600) => new Promise((r) => setTimeout(r, ms));
@@ -150,8 +151,14 @@ export async function mockUpdateOrderStatus(id, status) {
 }
 
 // ---------- Slots Mock API ----------
-export async function mockGetSlots() {
+export async function mockGetSlots(params = {}) {
   await delay(400);
+  if (slots.length === 0) {
+    slots = generateUpcomingSlots(new Date(), 2);
+  }
+  if (params?.futureOnly) {
+    return filterFutureSlots(slots, new Date());
+  }
   return [...slots];
 }
 

@@ -3,9 +3,9 @@ import { mockGetSlots, mockDeleteSlot } from '@/mocks/mockApi';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-export async function getSlots() {
+export async function getSlots(params = {}) {
   if (USE_MOCK) return mockGetSlots();
-  const res = await api.get('/slots');
+  const res = await api.get('/slots', { params });
   return res.data;
 }
 

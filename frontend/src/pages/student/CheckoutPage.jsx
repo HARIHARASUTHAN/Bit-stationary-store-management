@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { placeOrder } from '@/services/orderService';
 import { getShopInfo } from '@/services/authService';
 import { getSlots } from '@/services/slotService';
+import { filterFutureSlots, isSlotExpired } from '@/utils/slotTimeUtils';
 import { mockSlots } from '@/mocks/slots';
 import { campusShops, getActiveCampusShops, getShopForItem } from '@/mocks/shops';
 import { formatINR } from '@/utils/currency';
@@ -59,8 +60,17 @@ export default function StudentCheckoutPage() {
     } catch (_) { return null; }
   });
   const [liveSlots, setLiveSlots] = useState([]);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
 
   const availableShops = useMemo(() => getActiveCampusShops(liveShops), [liveShops]);
+
+  // Dynamic system clock timer: ticks every 15s so expired slots automatically disappear in real time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -73,7 +83,7 @@ export default function StudentCheckoutPage() {
       })
       .catch(() => {});
 
-    getSlots()
+    getSlots({ futureOnly: true })
       .then((slotsData) => {
         if (isMounted && Array.isArray(slotsData) && slotsData.length > 0) {
           setLiveSlots(slotsData);
@@ -86,7 +96,21 @@ export default function StudentCheckoutPage() {
     return () => { isMounted = false; };
   }, []);
 
-  const displaySlots = liveSlots;
+  // Filter only slots whose scheduled date and time are strictly in the future relative to the system clock
+  const displaySlots = useMemo(() => {
+    return filterFutureSlots(liveSlots, currentTime);
+  }, [liveSlots, currentTime]);
+
+  // Invalidate selected slot if it expires while the user is viewing the checkout page
+  useEffect(() => {
+    if (selectedSlotId) {
+      const isStillFuture = displaySlots.some((s) => s.id === selectedSlotId);
+      if (!isStillFuture) {
+        setSelectedSlotId('');
+        toast.warning('Pickup Slot Expired', 'The previously selected pickup slot has passed and was automatically removed.');
+      }
+    }
+  }, [displaySlots, selectedSlotId, toast]);
 
   // Determine active shop automatically (inherited from catalog or cart item)
   const activeShop = useMemo(() => {
@@ -122,6 +146,12 @@ export default function StudentCheckoutPage() {
 
     if (!selectedSlot) {
       toast.error('Select Pickup Window', 'Please select a pickup window time slot for collecting your items.');
+      return;
+    }
+
+    if (isSlotExpired(selectedSlot, new Date())) {
+      toast.error('Pickup Slot Expired', 'The selected pickup slot date and time have already passed. Please select an upcoming slot.');
+      setSelectedSlotId('');
       return;
     }
 
@@ -370,47 +400,57 @@ export default function StudentCheckoutPage() {
                 Arriving during your selected window guarantees instant queue-free clearance.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {displaySlots.map((slot) => {
-                  const isSelected = Boolean(selectedSlotId && selectedSlotId === slot.id);
-                  const shopBooked = (slot.shopBookings && typeof slot.shopBookings[activeShop.id] === 'number')
-                    ? slot.shopBookings[activeShop.id]
-                    : (slot.booked || 0);
-                  const remainingSpots = Math.max(0, slot.capacity - shopBooked);
-                  const isFull = remainingSpots <= 0;
+              {displaySlots.length === 0 ? (
+                <div className="p-8 text-center rounded-[18px] bg-[#faf5e8] border border-dashed border-[#e5e5e5] space-y-2">
+                  <Clock className="h-7 w-7 text-[#9a9a9a] mx-auto mb-1 animate-pulse" />
+                  <p className="text-sm font-semibold text-[#0a0a0a]">No Upcoming Pickup Slots Right Now</p>
+                  <p className="text-xs text-[#6a6a6a] max-w-md mx-auto leading-relaxed">
+                    All earlier slots have expired. Store operators will configure upcoming pickup windows shortly.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {displaySlots.map((slot) => {
+                    const isSelected = Boolean(selectedSlotId && selectedSlotId === slot.id);
+                    const shopBooked = (slot.shopBookings && typeof slot.shopBookings[activeShop.id] === 'number')
+                      ? slot.shopBookings[activeShop.id]
+                      : (slot.booked || 0);
+                    const remainingSpots = Math.max(0, slot.capacity - shopBooked);
+                    const isFull = remainingSpots <= 0;
 
-                  return (
-                    <div
-                      key={slot.id}
-                      onClick={() => !isFull && setSelectedSlotId(slot.id)}
-                      className={`p-4 rounded-[16px] border transition-all cursor-pointer ${isSelected
-                          ? 'border-[#0a0a0a] bg-[#faf5e8] ring-2 ring-[#0a0a0a] shadow-xs'
-                          : isFull
-                            ? 'opacity-40 cursor-not-allowed bg-[#faf5e8] border-[#e5e5e5]'
-                            : 'border-[#e5e5e5] hover:border-[#0a0a0a] bg-[#fffaf0]'
-                        }`}
-                    >
-                      <div className="flex items-center justify-between text-xs font-semibold">
-                        <span className="text-[#0a0a0a]">{slot.date}</span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full ${isFull
-                              ? 'bg-[#ff4d8b]/15 text-[#ff4d8b]'
-                              : isSelected
-                                ? 'bg-[#0a0a0a] text-white font-bold'
-                                : 'bg-[#a4d4c5]/40 text-[#1a3a3a]'
-                            }`}
-                        >
-                          {isFull ? 'FULL' : isSelected ? 'Selected' : `${remainingSpots} spots`}
-                        </span>
+                    return (
+                      <div
+                        key={slot.id}
+                        onClick={() => !isFull && setSelectedSlotId(slot.id)}
+                        className={`p-4 rounded-[16px] border transition-all cursor-pointer ${isSelected
+                            ? 'border-[#0a0a0a] bg-[#faf5e8] ring-2 ring-[#0a0a0a] shadow-xs'
+                            : isFull
+                              ? 'opacity-40 cursor-not-allowed bg-[#faf5e8] border-[#e5e5e5]'
+                              : 'border-[#e5e5e5] hover:border-[#0a0a0a] bg-[#fffaf0]'
+                          }`}
+                      >
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-[#0a0a0a]">{slot.date}</span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full ${isFull
+                                ? 'bg-[#ff4d8b]/15 text-[#ff4d8b]'
+                                : isSelected
+                                  ? 'bg-[#0a0a0a] text-white font-bold'
+                                  : 'bg-[#a4d4c5]/40 text-[#1a3a3a]'
+                              }`}
+                          >
+                            {isFull ? 'FULL' : isSelected ? 'Selected' : `${remainingSpots} spots`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-[#6a6a6a] mt-2">
+                          <Clock className="h-3.5 w-3.5 text-[#0a0a0a]" />
+                          <span>{slot.time}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-[#6a6a6a] mt-2">
-                        <Clock className="h-3.5 w-3.5 text-[#0a0a0a]" />
-                        <span>{slot.time}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Special Instructions */}

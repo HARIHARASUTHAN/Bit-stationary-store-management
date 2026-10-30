@@ -3,6 +3,7 @@ import { db, isFirebaseConnected } from '../config/firebase.js';
 import { memoryUsers } from './authController.js';
 import { memoryInventory } from './inventoryController.js';
 import { memorySlots } from './slotController.js';
+import { isSlotExpired } from '../utils/slotTimeUtils.js';
 
 /**
  * Generate cryptographically secure random 6-digit numeric pickup code
@@ -299,6 +300,21 @@ export async function placeOrder(req, res, next) {
 
     if (!items || !items.length) {
       return res.status(400).json({ error: 'BadRequest', message: 'Order must contain at least 1 item.' });
+    }
+
+    // Validate that pickup slot is provided and not expired
+    if (!pickupSlot || !pickupSlot.date || !pickupSlot.time) {
+      return res.status(400).json({
+        error: 'BadRequest',
+        message: 'A valid pickup slot window (date and time) is required to place an order.',
+      });
+    }
+
+    if (isSlotExpired(pickupSlot, new Date())) {
+      return res.status(400).json({
+        error: 'SlotExpired',
+        message: `The selected pickup slot (${pickupSlot.date} ${pickupSlot.time}) has already expired. Please select a future pickup window.`,
+      });
     }
 
     const total = items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);

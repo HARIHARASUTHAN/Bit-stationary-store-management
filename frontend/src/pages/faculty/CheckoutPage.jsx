@@ -10,6 +10,7 @@ import useCartStore from '@/hooks/useCart';
 import { useAuth } from '@/context/AuthContext';
 import { placeOrder } from '@/services/orderService';
 import { getSlots } from '@/services/slotService';
+import { filterFutureSlots, isSlotExpired } from '@/utils/slotTimeUtils';
 import { getShopInfo } from '@/services/authService';
 import { getActiveCampusShops } from '@/mocks/shops';
 import { formatINR } from '@/utils/currency';
@@ -46,6 +47,7 @@ export default function FacultyCheckoutPage() {
   } = useCartStore();
 
   const [liveSlots, setLiveSlots] = useState([]);
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [isBulkOrder, setIsBulkOrder] = useState(true);
   const [departmentNote, setDepartmentNote] = useState('Department Examination & Laboratory Consumables');
@@ -89,6 +91,14 @@ export default function FacultyCheckoutPage() {
     );
   }, [availableShops, searchParams, cartShopId, cartItems]);
 
+  // Dynamic system clock timer: ticks every 15s so expired slots automatically disappear in real time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -101,11 +111,10 @@ export default function FacultyCheckoutPage() {
       })
       .catch(() => {});
 
-    getSlots()
+    getSlots({ futureOnly: true })
       .then((slotsData) => {
         if (isMounted && Array.isArray(slotsData) && slotsData.length > 0) {
           setLiveSlots(slotsData);
-          setSelectedSlotId(slotsData[0].id);
         }
       })
       .catch((err) => {
@@ -117,7 +126,25 @@ export default function FacultyCheckoutPage() {
     };
   }, []);
 
-  const displaySlots = liveSlots;
+  // Filter only slots whose scheduled date and time are strictly in the future relative to the system clock
+  const displaySlots = useMemo(() => {
+    return filterFutureSlots(liveSlots, currentTime);
+  }, [liveSlots, currentTime]);
+
+  // Invalidate or update selected slot if it expires while viewing the checkout page
+  useEffect(() => {
+    if (selectedSlotId) {
+      const isStillFuture = displaySlots.some((s) => s.id === selectedSlotId);
+      if (!isStillFuture) {
+        setSelectedSlotId(displaySlots[0]?.id || '');
+        if (displaySlots.length === 0) {
+          toast.warning('Pickup Slot Expired', 'The previously selected pickup slot has passed and was automatically removed.');
+        }
+      }
+    } else if (displaySlots.length > 0) {
+      setSelectedSlotId(displaySlots[0].id);
+    }
+  }, [displaySlots, selectedSlotId, toast]);
 
   const selectedSlot = useMemo(() => {
     if (!displaySlots || displaySlots.length === 0) return null;
@@ -146,6 +173,12 @@ export default function FacultyCheckoutPage() {
 
     if (!selectedSlot) {
       toast.error('Select Pickup Window', 'Please select a pickup window time slot for collecting your items.');
+      return;
+    }
+
+    if (isSlotExpired(selectedSlot, new Date())) {
+      toast.error('Pickup Slot Expired', 'The selected pickup slot date and time have already passed. Please select an upcoming slot.');
+      setSelectedSlotId('');
       return;
     }
 
@@ -411,8 +444,12 @@ export default function FacultyCheckoutPage() {
               </div>
 
               {displaySlots.length === 0 ? (
-                <div className="p-6 text-center text-xs text-[#6a6a6a] bg-white rounded-[16px] border border-dashed border-[#e5e5e5]">
-                  Loading available pickup slots...
+                <div className="p-8 text-center rounded-[18px] bg-white border border-dashed border-[#e5e5e5] space-y-2">
+                  <Clock className="h-7 w-7 text-[#9a9a9a] mx-auto mb-1 animate-pulse" />
+                  <p className="text-sm font-semibold text-[#0a0a0a]">No Upcoming Priority Slots Right Now</p>
+                  <p className="text-xs text-[#6a6a6a] max-w-md mx-auto leading-relaxed">
+                    All earlier priority slots have expired. Store dispatchers will open upcoming collection windows shortly.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
